@@ -4,8 +4,13 @@ import { useState } from "react";
 import type {
   TechnicalEnglishPayload,
   TechnicalEnglishResult,
-  TechnicalEnglishStyleCheck,
 } from "@/lib/types";
+import { useAppPreferences } from "@/components/shell/AppPreferencesProvider";
+import {
+  getReaderOptions,
+  getStyleCheckStatus,
+  getStyleOptions,
+} from "@/lib/i18n/helpers";
 import ActionButton from "./ActionButton";
 import SelectField from "./SelectField";
 import TextAreaField from "./TextAreaField";
@@ -17,38 +22,6 @@ type Props = {
   canApply: boolean;
   onConvert: (payload: TechnicalEnglishPayload) => void;
   onApply: (text: string) => void;
-};
-
-const STYLE_OPTIONS = [
-  { value: "api_reference", label: "API reference" },
-  { value: "tutorial", label: "Tutorial" },
-  { value: "release_note", label: "Release note" },
-  { value: "engineer_question", label: "Engineer question" },
-  { value: "error_explanation", label: "Error explanation" },
-  { value: "ui_copy", label: "UI copy" },
-  { value: "faq", label: "FAQ" },
-];
-
-const READER_OPTIONS = [
-  { value: "beginner", label: "Beginner developer" },
-  { value: "frontend", label: "Frontend developer" },
-  { value: "backend", label: "Backend developer" },
-  { value: "technical_writer", label: "Technical writer" },
-];
-
-const STATUS_STYLES: Record<
-  TechnicalEnglishStyleCheck["status"],
-  { label: string; cls: string }
-> = {
-  passed: { label: "Passed", cls: "bg-emerald-50 text-emerald-700 ring-emerald-200" },
-  needs_revision: {
-    label: "Needs revision",
-    cls: "bg-amber-50 text-amber-700 ring-amber-200",
-  },
-  not_applicable: {
-    label: "N/A",
-    cls: "bg-slate-100 text-slate-600 ring-slate-200",
-  },
 };
 
 function ResultBlock({
@@ -75,6 +48,10 @@ export default function TechnicalEnglishCoach({
   onConvert,
   onApply,
 }: Props) {
+  const { t } = useAppPreferences();
+  const styleOptions = getStyleOptions(t);
+  const readerOptions = getReaderOptions(t);
+
   const [koreanText, setKoreanText] = useState("");
   const [targetStyle, setTargetStyle] =
     useState<TechnicalEnglishPayload["targetStyle"]>("api_reference");
@@ -115,8 +92,8 @@ export default function TechnicalEnglishCoach({
           `${i + 1}. "${item.koreanExpression}"`,
           `   -> ${item.recommendedEnglish}`,
         ];
-        if (item.reason) lines.push(`   Why: ${item.reason}`);
-        if (item.caution) lines.push(`   Caution: ${item.caution}`);
+        if (item.reason) lines.push(`   ${t("technicalEnglish.whyWorks")}: ${item.reason}`);
+        if (item.caution) lines.push(`   ${t("technicalEnglish.caution")}: ${item.caution}`);
         return lines.join("\n");
       })
       .join("\n\n");
@@ -124,39 +101,43 @@ export default function TechnicalEnglishCoach({
 
   return (
     <div className="space-y-3">
+      <p className="rounded-lg border border-brand-100 bg-brand-50/50 px-3 py-2 text-xs text-brand-800">
+        {t("technicalEnglish.banner")}
+      </p>
+
       <TextAreaField
-        label="Korean source text"
+        label={t("technicalEnglish.koreanSource")}
         value={koreanText}
         onChange={setKoreanText}
         rows={4}
-        placeholder="예: 이 API는 유저를 생성할 때 사용합니다. API 토큰이 필요하고, user_id는 필수입니다."
+        placeholder={t("technicalEnglish.koreanPlaceholder")}
       />
 
       <div className="grid gap-3 sm:grid-cols-2">
         <SelectField
-          label="Target style"
+          label={t("technicalEnglish.targetStyle")}
           value={targetStyle}
           onChange={(v) =>
             setTargetStyle(v as TechnicalEnglishPayload["targetStyle"])
           }
-          options={STYLE_OPTIONS}
+          options={styleOptions}
         />
         <SelectField
-          label="Target reader"
+          label={t("technicalEnglish.targetReader")}
           value={targetReader}
           onChange={(v) =>
             setTargetReader(v as TechnicalEnglishPayload["targetReader"])
           }
-          options={READER_OPTIONS}
+          options={readerOptions}
         />
       </div>
 
       <TextAreaField
-        label="Style guide (optional)"
+        label={t("technicalEnglish.styleGuideOptional")}
         value={styleGuide}
         onChange={setStyleGuide}
         rows={2}
-        placeholder="예: Use 'API token', not 'API key'. Use 'request body', not 'payload'. Avoid 'just' and 'simply'."
+        placeholder={t("technicalEnglish.styleGuidePlaceholder")}
       />
 
       <ActionButton
@@ -164,23 +145,23 @@ export default function TechnicalEnglishCoach({
         fullWidth
         onClick={handleConvert}
         loading={loading}
-        loadingText="Technical English 변환 중…"
+        loadingText={t("loading.technical_english_coach")}
         disabled={loading || !koreanText.trim()}
       >
-        Convert to Technical English
+        {t("technicalEnglish.convert")}
       </ActionButton>
 
-      {loading && <LoadingState label="Technical English 변환 중…" />}
+      {loading && <LoadingState label={t("loading.technical_english_coach")} />}
 
       {!loading && result && (
         <div className="space-y-3 border-t border-slate-100 pt-3">
-          <ResultBlock title="Recommended English">
+          <ResultBlock title={t("technicalEnglish.recommendedEnglish")}>
             <p className="text-sm leading-relaxed text-slate-800">
               {result.recommendedEnglish || "—"}
             </p>
           </ResultBlock>
 
-          <ResultBlock title="Expression Breakdown">
+          <ResultBlock title={t("technicalEnglish.expressionBreakdown")}>
             {result.expressionBreakdown.length === 0 ? (
               <p className="text-xs text-slate-400">—</p>
             ) : (
@@ -191,7 +172,9 @@ export default function TechnicalEnglishCoach({
                     className="rounded-md border border-slate-200 bg-slate-50/60 p-2.5"
                   >
                     <p className="text-xs text-slate-500">
-                      <span className="font-medium text-slate-600">KO:</span>{" "}
+                      <span className="font-medium text-slate-600">
+                        {t("globalDocs.koLabel")}:
+                      </span>{" "}
                       {item.koreanExpression}
                     </p>
                     {item.literalEnglish && (
@@ -205,7 +188,7 @@ export default function TechnicalEnglishCoach({
                     {item.reason && (
                       <p className="mt-1 text-xs text-slate-500">
                         <span className="font-medium text-slate-600">
-                          Why this works:
+                          {t("technicalEnglish.whyWorks")}:
                         </span>{" "}
                         {item.reason}
                       </p>
@@ -213,7 +196,7 @@ export default function TechnicalEnglishCoach({
                     {item.alternatives.length > 0 && (
                       <div className="mt-1.5">
                         <p className="text-[11px] font-medium uppercase tracking-wide text-slate-400">
-                          Alternatives
+                          {t("technicalEnglish.alternatives")}
                         </p>
                         <ul className="mt-1 space-y-1">
                           {item.alternatives.map((alt, j) => (
@@ -222,14 +205,11 @@ export default function TechnicalEnglishCoach({
                                 {alt.expression}
                               </span>
                               {alt.nuance && (
-                                <span className="text-slate-400">
-                                  {" "}
-                                  — {alt.nuance}
-                                </span>
+                                <span className="text-slate-400"> — {alt.nuance}</span>
                               )}
                               {alt.whenToUse && (
                                 <span className="block text-[11px] text-slate-400">
-                                  when: {alt.whenToUse}
+                                  {t("technicalEnglish.whenToUse")}: {alt.whenToUse}
                                 </span>
                               )}
                             </li>
@@ -249,24 +229,22 @@ export default function TechnicalEnglishCoach({
           </ResultBlock>
 
           {result.terminologyNotes.length > 0 && (
-            <ResultBlock title="Terms to be careful with">
+            <ResultBlock title={t("technicalEnglish.termsToBeCareful")}>
               <ul className="space-y-1.5">
-                {result.terminologyNotes.map((t, i) => (
+                {result.terminologyNotes.map((note, i) => (
                   <li key={i} className="text-xs text-slate-600">
-                    <span className="font-medium text-slate-800">
-                      {t.term}
-                    </span>{" "}
+                    <span className="font-medium text-slate-800">{note.term}</span>{" "}
                     →{" "}
                     <span className="font-mono text-emerald-700">
-                      {t.recommendedExpression}
+                      {note.recommendedExpression}
                     </span>
-                    {t.avoid && (
+                    {note.avoid && (
                       <span className="ml-1 font-mono text-rose-500 line-through">
-                        {t.avoid}
+                        {note.avoid}
                       </span>
                     )}
-                    {t.reason && (
-                      <span className="block text-slate-400">{t.reason}</span>
+                    {note.reason && (
+                      <span className="block text-slate-400">{note.reason}</span>
                     )}
                   </li>
                 ))}
@@ -275,10 +253,10 @@ export default function TechnicalEnglishCoach({
           )}
 
           {result.styleGuideChecks.length > 0 && (
-            <ResultBlock title="Style guide checks">
+            <ResultBlock title={t("technicalEnglish.styleChecks")}>
               <ul className="space-y-1.5">
                 {result.styleGuideChecks.map((c, i) => {
-                  const s = STATUS_STYLES[c.status];
+                  const s = getStyleCheckStatus(t, c.status);
                   return (
                     <li key={i} className="flex items-start gap-2 text-xs">
                       <span
@@ -287,13 +265,9 @@ export default function TechnicalEnglishCoach({
                         {s.label}
                       </span>
                       <span className="text-slate-600">
-                        <span className="font-medium text-slate-700">
-                          {c.rule}
-                        </span>
+                        <span className="font-medium text-slate-700">{c.rule}</span>
                         {c.comment && (
-                          <span className="block text-slate-400">
-                            {c.comment}
-                          </span>
+                          <span className="block text-slate-400">{c.comment}</span>
                         )}
                       </span>
                     </li>
@@ -303,7 +277,7 @@ export default function TechnicalEnglishCoach({
             </ResultBlock>
           )}
 
-          <ResultBlock title="Final polished version">
+          <ResultBlock title={t("technicalEnglish.finalPolishedVersion")}>
             <p className="text-sm leading-relaxed text-slate-800">
               {result.finalPolishedVersion || "—"}
             </p>
@@ -320,11 +294,13 @@ export default function TechnicalEnglishCoach({
               disabled={!canApply}
               title={
                 canApply
-                  ? "현재 문서 초안에 추가합니다"
-                  : "먼저 Analyze API로 프로젝트를 생성하세요"
+                  ? t("technicalEnglish.applyDraftTooltip")
+                  : t("technicalEnglish.applyDraftDisabledTooltip")
               }
             >
-              {copied === "applied" ? "적용됨!" : "Apply to Documentation Draft"}
+              {copied === "applied"
+                ? t("technicalEnglish.applied")
+                : t("technicalEnglish.applyDraft")}
             </ActionButton>
             <ActionButton
               variant="secondary"
@@ -336,17 +312,25 @@ export default function TechnicalEnglishCoach({
                 )
               }
             >
-              {copied === "english" ? "복사됨!" : "Copy English"}
+              {copied === "english"
+                ? t("technicalEnglish.copied")
+                : t("technicalEnglish.copyEnglish")}
             </ActionButton>
             <ActionButton
               variant="secondary"
               size="sm"
               onClick={() => copyText(breakdownToText(result), "breakdown")}
             >
-              {copied === "breakdown" ? "복사됨!" : "Copy Breakdown"}
+              {copied === "breakdown"
+                ? t("technicalEnglish.copied")
+                : t("technicalEnglish.copyBreakdown")}
             </ActionButton>
           </div>
         </div>
+      )}
+
+      {!loading && !result && (
+        <p className="text-xs text-slate-400">{t("technicalEnglish.emptyResult")}</p>
       )}
     </div>
   );

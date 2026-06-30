@@ -1,13 +1,14 @@
+"use client";
+
 import type { ApiDocProject, FieldItem } from "@/lib/types";
-import {
-  AUTH_LABELS,
-  MethodBadge,
-  Pill,
-  READER_LABELS,
-} from "./Badges";
+import { MethodBadge, Pill } from "./Badges";
+import { getAuthLabel, getReaderLabel } from "@/lib/i18n/helpers";
+import { useAppPreferences } from "@/components/shell/AppPreferencesProvider";
 import EmptyState from "./EmptyState";
 
 function FieldList({ fields }: { fields: FieldItem[] }) {
+  const { t } = useAppPreferences();
+
   if (fields.length === 0) {
     return <p className="text-xs text-slate-400">—</p>;
   }
@@ -16,20 +17,20 @@ function FieldList({ fields }: { fields: FieldItem[] }) {
       {fields.map((f, i) => (
         <li key={`${f.name}-${i}`} className="text-xs text-slate-600">
           <span className="font-mono font-medium text-slate-800">
-            {f.name || "(unnamed)"}
+            {f.name || t("summary.unnamed")}
           </span>
           {f.type && <span className="text-slate-400"> : {f.type}</span>}
           {f.required ? (
-            <span className="ml-1 text-rose-500">*required</span>
+            <span className="ml-1 text-rose-500">*{t("summary.required")}</span>
           ) : f.required === false ? (
-            <span className="ml-1 text-slate-400">optional</span>
+            <span className="ml-1 text-slate-400">{t("summary.optional")}</span>
           ) : null}
           {f.description && (
             <span className="block text-slate-500">{f.description}</span>
           )}
           {f.constraints && (
             <span className="block text-[11px] text-slate-400">
-              constraints: {f.constraints}
+              {t("summary.constraints")}: {f.constraints}
             </span>
           )}
         </li>
@@ -69,11 +70,13 @@ export default function StructuredSummary({
 }: {
   project: ApiDocProject | null;
 }) {
+  const { t } = useAppPreferences();
+
   if (!project) {
     return (
       <EmptyState
-        title="아직 구조화된 요약이 없습니다"
-        description="왼쪽에서 API 정보를 입력하고 'Analyze API'를 실행하면 여기에 정리된 요약이 표시됩니다."
+        title={t("summary.emptyTitle")}
+        description={t("summary.emptyDesc")}
       />
     );
   }
@@ -91,19 +94,19 @@ export default function StructuredSummary({
     ...request.bodyFields,
   ].filter((f) => f.required === false);
 
-  const ops = Object.entries({
-    "Rate limit": operationalNotes.rateLimit,
-    Pagination: operationalNotes.pagination,
-    Webhook: operationalNotes.webhook,
-    "Retry behavior": operationalNotes.retryBehavior,
-    Idempotency: operationalNotes.idempotency,
-  }).filter(([, v]) => v && v.trim());
+  const ops = [
+    { label: t("summary.rateLimit"), value: operationalNotes.rateLimit },
+    { label: t("summary.pagination"), value: operationalNotes.pagination },
+    { label: t("summary.webhook"), value: operationalNotes.webhook },
+    { label: t("summary.retryBehavior"), value: operationalNotes.retryBehavior },
+    { label: t("summary.idempotency"), value: operationalNotes.idempotency },
+  ].filter((item) => item.value && item.value.trim());
 
   return (
     <div className="space-y-3">
-      <Block title="Endpoint">
+      <Block title={t("summary.endpoint")}>
         <h3 className="text-sm font-semibold text-slate-900">
-          {project.title || "Untitled API"}
+          {project.title || t("summary.untitled")}
         </h3>
         <div className="mt-2 flex flex-wrap items-center gap-2">
           <MethodBadge method={endpoint.method} />
@@ -115,31 +118,33 @@ export default function StructuredSummary({
           <p className="mt-2 text-xs text-slate-600">{endpoint.description}</p>
         )}
         <dl className="mt-2 divide-y divide-slate-100">
-          <Row label="Target reader">
-            <Pill>{READER_LABELS[project.targetReader]}</Pill>
+          <Row label={t("summary.targetReader")}>
+            <Pill>{getReaderLabel(t, project.targetReader)}</Pill>
           </Row>
-          <Row label="Auth type">
-            <Pill>{AUTH_LABELS[auth.type]}</Pill>
+          <Row label={t("summary.authType")}>
+            <Pill>{getAuthLabel(t, auth.type)}</Pill>
           </Row>
           {project.productArea && (
-            <Row label="Product area">{project.productArea}</Row>
+            <Row label={t("summary.productArea")}>{project.productArea}</Row>
           )}
-          {project.useCase && <Row label="Use case">{project.useCase}</Row>}
+          {project.useCase && (
+            <Row label={t("summary.useCase")}>{project.useCase}</Row>
+          )}
         </dl>
       </Block>
 
       <div className="grid gap-3 sm:grid-cols-2">
-        <Block title="Required fields">
+        <Block title={t("summary.requiredFields")}>
           <FieldList fields={requiredFields} />
         </Block>
-        <Block title="Optional fields">
+        <Block title={t("summary.optionalFields")}>
           <FieldList fields={optionalFields} />
         </Block>
       </div>
 
-      <Block title="Success response">
+      <Block title={t("summary.successResponse")}>
         <p className="text-xs text-slate-600">
-          Status:{" "}
+          {t("summary.status")}:{" "}
           <span className="font-mono font-medium text-slate-800">
             {response.successStatus ?? "unknown"}
           </span>
@@ -149,7 +154,7 @@ export default function StructuredSummary({
         </div>
       </Block>
 
-      <Block title="Error codes">
+      <Block title={t("summary.errorCodes")}>
         {errors.length === 0 ? (
           <p className="text-xs text-slate-400">—</p>
         ) : (
@@ -165,7 +170,7 @@ export default function StructuredSummary({
                 )}
                 {e.howToFix && (
                   <span className="block text-[11px] text-slate-400">
-                    fix: {e.howToFix}
+                    {t("summary.fix")}: {e.howToFix}
                   </span>
                 )}
               </li>
@@ -174,14 +179,14 @@ export default function StructuredSummary({
         )}
       </Block>
 
-      <Block title="Operational notes">
+      <Block title={t("summary.operationalNotes")}>
         {ops.length === 0 ? (
           <p className="text-xs text-slate-400">—</p>
         ) : (
           <dl className="divide-y divide-slate-100">
-            {ops.map(([k, v]) => (
-              <Row key={k} label={k}>
-                {v}
+            {ops.map(({ label, value }) => (
+              <Row key={label} label={label}>
+                {value}
               </Row>
             ))}
           </dl>

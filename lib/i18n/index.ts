@@ -17,7 +17,16 @@ export function getMessage(tree: MessageTree, path: string): string {
 
 export function createTranslator(locale: Locale) {
   const tree = messages[locale];
-  return (path: string) => getMessage(tree, path);
+  return (path: string, vars?: Record<string, string | number>) => {
+    let text = getMessage(tree, path);
+    if (vars) {
+      for (const [k, v] of Object.entries(vars)) {
+        text = text.replaceAll(`{${k}}`, String(v));
+      }
+    }
+    return text;
+  };
 }
 
 export { messages };
+export * from "./helpers";

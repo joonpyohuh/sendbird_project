@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   FileInput,
   BookMarked,
@@ -17,6 +17,7 @@ import {
 import type { AiAction, RawFormInput } from "@/lib/types";
 import GlobalDocsMode from "@/components/GlobalDocsMode";
 import TechnicalEnglishCoach from "@/components/TechnicalEnglishCoach";
+import { useAppPreferences } from "@/components/shell/AppPreferencesProvider";
 import { StyleGuidePanel } from "./style-guide-panel";
 import type {
   GlobalDocsConvertPayload,
@@ -33,13 +34,6 @@ import {
   Tabs,
   TextAreaField,
 } from "./primitives";
-
-const tabs = [
-  { id: "input", label: "API Input", icon: <FileInput className="h-3.5 w-3.5" /> },
-  { id: "style", label: "Style Guide", icon: <BookMarked className="h-3.5 w-3.5" /> },
-  { id: "global", label: "Global Docs", icon: <Globe className="h-3.5 w-3.5" /> },
-  { id: "english", label: "Technical English", icon: <Languages className="h-3.5 w-3.5" /> },
-];
 
 type ApiSourcePanelProps = {
   form: RawFormInput;
@@ -91,25 +85,27 @@ function ApiInputTab({
   | "onEngineerQuestions"
   | "onGenerateDoc"
 >) {
+  const { t } = useAppPreferences();
+
   return (
     <div className="space-y-4">
       <TextAreaField
-        label="Raw API notes"
+        label={t("api.rawNotesLabel")}
         rows={5}
         value={form.rawNotes}
         onChange={(e) => setField("rawNotes", e.target.value)}
-        placeholder="Paste raw API notes from engineers. Korean or English is fine."
+        placeholder={t("api.rawNotesPlaceholder")}
       />
 
       <div className="grid gap-3 sm:grid-cols-2">
         <InputField
-          label="Feature name"
+          label={t("api.featureName")}
           value={form.featureName}
           onChange={(e) => setField("featureName", e.target.value)}
-          placeholder="Create a user"
+          placeholder={t("api.placeholderFeatureName")}
         />
         <SelectField
-          label="HTTP method"
+          label={t("api.httpMethod")}
           value={form.method}
           onChange={(e) => setField("method", e.target.value as RawFormInput["method"])}
           options={["GET", "POST", "PUT", "PATCH", "DELETE"]}
@@ -117,22 +113,22 @@ function ApiInputTab({
       </div>
 
       <InputField
-        label="Endpoint URL"
+        label={t("api.endpointUrl")}
         mono
         value={form.endpointUrl}
         onChange={(e) => setField("endpointUrl", e.target.value)}
-        placeholder="/v3/users"
+        placeholder={t("api.placeholderEndpointUrl")}
       />
 
       <div className="grid gap-3 sm:grid-cols-2">
         <InputField
-          label="Product area"
+          label={t("api.productArea")}
           value={form.productArea}
           onChange={(e) => setField("productArea", e.target.value)}
-          placeholder="User management"
+          placeholder={t("api.placeholderProductArea")}
         />
         <SelectField
-          label="Target reader"
+          label={t("api.targetReader")}
           value={form.targetReader}
           onChange={(e) =>
             setField("targetReader", e.target.value as RawFormInput["targetReader"])
@@ -142,44 +138,47 @@ function ApiInputTab({
       </div>
 
       <TextAreaField
-        label="Description"
+        label={t("api.description")}
         rows={2}
         value={form.description}
         onChange={(e) => setField("description", e.target.value)}
-        placeholder="Creates a new user in the application."
+        placeholder={t("api.placeholderDescription")}
       />
 
       <SelectField
-        label="Authentication type"
+        label={t("api.authType")}
         value={form.authType}
         onChange={(e) => setField("authType", e.target.value as RawFormInput["authType"])}
         options={authOptions}
       />
 
-      <Collapsible title="Request Details" icon={<ArrowDownToLine className="h-4 w-4 text-primary" />}>
+      <Collapsible
+        title={t("workspace.requestDetails")}
+        icon={<ArrowDownToLine className="h-4 w-4 text-primary" />}
+      >
         <TextAreaField
-          label="Path parameters"
+          label={t("api.pathParams")}
           mono
           rows={2}
           value={form.pathParams}
           onChange={(e) => setField("pathParams", e.target.value)}
         />
         <TextAreaField
-          label="Query parameters"
+          label={t("api.queryParams")}
           mono
           rows={2}
           value={form.queryParams}
           onChange={(e) => setField("queryParams", e.target.value)}
         />
         <TextAreaField
-          label="Request body"
+          label={t("api.requestBody")}
           mono
           rows={3}
           value={form.requestBody}
           onChange={(e) => setField("requestBody", e.target.value)}
         />
         <TextAreaField
-          label="Example request"
+          label={t("api.exampleRequest")}
           mono
           rows={3}
           value={form.exampleRequest}
@@ -187,23 +186,26 @@ function ApiInputTab({
         />
       </Collapsible>
 
-      <Collapsible title="Response Details" icon={<ListTree className="h-4 w-4 text-primary" />}>
+      <Collapsible
+        title={t("workspace.responseDetails")}
+        icon={<ListTree className="h-4 w-4 text-primary" />}
+      >
         <InputField
-          label="Success status code"
+          label={t("api.successStatus")}
           mono
           value={form.successStatus}
           onChange={(e) => setField("successStatus", e.target.value)}
           placeholder="200"
         />
         <TextAreaField
-          label="Response body"
+          label={t("api.responseBody")}
           mono
           rows={3}
           value={form.responseBody}
           onChange={(e) => setField("responseBody", e.target.value)}
         />
         <TextAreaField
-          label="Example response"
+          label={t("api.exampleResponse")}
           mono
           rows={3}
           value={form.exampleResponse}
@@ -211,9 +213,12 @@ function ApiInputTab({
         />
       </Collapsible>
 
-      <Collapsible title="Errors & Operations" icon={<AlertTriangle className="h-4 w-4 text-primary" />}>
+      <Collapsible
+        title={t("workspace.errorsOperations")}
+        icon={<AlertTriangle className="h-4 w-4 text-primary" />}
+      >
         <TextAreaField
-          label="Error cases"
+          label={t("api.errorCases")}
           mono
           rows={3}
           value={form.errorCases}
@@ -221,24 +226,24 @@ function ApiInputTab({
         />
         <div className="grid gap-3 sm:grid-cols-2">
           <InputField
-            label="Rate limit"
+            label={t("api.rateLimit")}
             value={form.rateLimit}
             onChange={(e) => setField("rateLimit", e.target.value)}
           />
           <InputField
-            label="Pagination"
+            label={t("api.pagination")}
             value={form.pagination}
             onChange={(e) => setField("pagination", e.target.value)}
           />
         </div>
         <div className="grid gap-3 sm:grid-cols-2">
           <InputField
-            label="Webhook event"
+            label={t("api.webhook")}
             value={form.webhook}
             onChange={(e) => setField("webhook", e.target.value)}
           />
           <InputField
-            label="Retry behavior"
+            label={t("api.retryBehavior")}
             value={form.retryBehavior}
             onChange={(e) => setField("retryBehavior", e.target.value)}
           />
@@ -254,7 +259,7 @@ function ApiInputTab({
           disabled={isBusy}
           onClick={onAnalyze}
         >
-          Analyze API
+          {t("api.analyze")}
         </ActionButton>
         <ActionButton
           variant="secondary"
@@ -264,7 +269,7 @@ function ApiInputTab({
           disabled={isBusy || !hasProject}
           onClick={onMissingInfo}
         >
-          Find Missing Info
+          {t("api.missingInfo")}
         </ActionButton>
         <ActionButton
           variant="secondary"
@@ -274,7 +279,7 @@ function ApiInputTab({
           disabled={isBusy || !hasProject}
           onClick={onEngineerQuestions}
         >
-          Generate Engineer Questions
+          {t("api.engineerQuestions")}
         </ActionButton>
         <ActionButton
           icon={<FileText className="h-4 w-4" />}
@@ -283,7 +288,7 @@ function ApiInputTab({
           disabled={isBusy || !hasProject}
           onClick={onGenerateDoc}
         >
-          Generate Documentation
+          {t("api.generateDoc")}
         </ActionButton>
       </div>
     </div>
@@ -293,12 +298,27 @@ function ApiInputTab({
 export function ApiSourcePanel(props: ApiSourcePanelProps) {
   const [tab, setTab] = useState("input");
   const { busy } = props;
+  const { t } = useAppPreferences();
+
+  const tabs = useMemo(
+    () => [
+      { id: "input", label: t("workspace.tabInput"), icon: <FileInput className="h-3.5 w-3.5" /> },
+      { id: "style", label: t("workspace.tabStyle"), icon: <BookMarked className="h-3.5 w-3.5" /> },
+      { id: "global", label: t("workspace.tabGlobal"), icon: <Globe className="h-3.5 w-3.5" /> },
+      {
+        id: "english",
+        label: t("workspace.tabEnglish"),
+        icon: <Languages className="h-3.5 w-3.5" />,
+      },
+    ],
+    [t]
+  );
 
   return (
     <div className="flex h-full flex-col rounded-2xl border border-border bg-card shadow-sm shadow-primary/5">
       <div className="border-b border-border p-3">
         <p className="mb-2 px-1 text-xs font-semibold uppercase tracking-wide text-text-muted">
-          API Source
+          {t("workspace.apiSource")}
         </p>
         <Tabs tabs={tabs} active={tab} onChange={setTab} />
       </div>

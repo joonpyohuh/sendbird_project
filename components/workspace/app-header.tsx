@@ -1,6 +1,7 @@
 "use client";
 
 import { BookOpen, Download, RotateCcw, Sparkles, Save, CircleCheck } from "lucide-react";
+import { useAppPreferences } from "@/components/shell/AppPreferencesProvider";
 import { Badge } from "./badges";
 import { ActionButton } from "./primitives";
 
@@ -21,6 +22,8 @@ export function AppHeader({
   hasSavedState,
   disabled = false,
 }: AppHeaderProps) {
+  const { t } = useAppPreferences();
+
   return (
     <header className="border-b border-border bg-card/80 backdrop-blur supports-[backdrop-filter]:bg-card/70">
       <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-4 pr-28 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:pr-6">
@@ -31,26 +34,24 @@ export function AppHeader({
           <div>
             <div className="flex flex-wrap items-center gap-2">
               <h1 className="text-lg font-semibold tracking-tight text-foreground">
-                API Doc Workspace
+                {t("header.title")}
               </h1>
               <Badge tone="primary" icon={<Sparkles className="h-3 w-3" />}>
-                Technical Writer AX Tool
+                {t("header.badge")}
               </Badge>
             </div>
-            <p className="mt-0.5 text-sm text-text-secondary">
-              Structure, review, and polish API documentation with AI.
-            </p>
+            <p className="mt-0.5 text-sm text-text-secondary">{t("header.subtitle")}</p>
           </div>
         </div>
 
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           <div className="flex items-center gap-2">
             <Badge tone="success" icon={<CircleCheck className="h-3 w-3" />}>
-              AI Ready
+              {t("header.aiReady")}
             </Badge>
             {hasSavedState && (
               <Badge tone="muted" icon={<Save className="h-3 w-3" />}>
-                Local Draft Saved
+                {t("header.draftSaved")}
               </Badge>
             )}
           </div>
@@ -62,7 +63,7 @@ export function AppHeader({
               onClick={onLoadSample}
               disabled={disabled}
             >
-              Load Sample
+              {t("header.loadSample")}
             </ActionButton>
             <ActionButton
               variant="secondary"
@@ -71,7 +72,7 @@ export function AppHeader({
               onClick={onExport}
               disabled={disabled || !hasDraft}
             >
-              Export Markdown
+              {t("header.exportMarkdown")}
             </ActionButton>
             <ActionButton
               variant="ghost"
@@ -80,7 +81,7 @@ export function AppHeader({
               onClick={onReset}
               disabled={disabled}
             >
-              Reset
+              {t("header.reset")}
             </ActionButton>
           </div>
         </div>

@@ -13,6 +13,7 @@ import MissingInfoList from "@/components/MissingInfoList";
 import EngineerQuestionsPanel from "@/components/EngineerQuestionsPanel";
 import ReviewIssuesPanel from "@/components/ReviewIssuesPanel";
 import LoadingState from "@/components/LoadingState";
+import { useAppPreferences } from "@/components/shell/AppPreferencesProvider";
 import { SectionCard, ActionButton } from "./primitives";
 import { Badge } from "./badges";
 
@@ -37,6 +38,7 @@ export function AiReviewPanel({
   onUpdateQuestion,
   onCopyQuestions,
 }: AiReviewPanelProps) {
+  const { t } = useAppPreferences();
   const openCount =
     project?.engineerQuestions.filter((q) => q.status === "open").length ?? 0;
 
@@ -44,7 +46,7 @@ export function AiReviewPanel({
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-2 px-1">
         <p className="text-xs font-semibold uppercase tracking-wide text-text-muted">
-          AI Review
+          {t("workspace.aiReview")}
         </p>
         <ActionButton
           variant="secondary"
@@ -55,27 +57,25 @@ export function AiReviewPanel({
           disabled={isBusy || !project?.docDraftMarkdown?.trim()}
           onClick={onReviewDoc}
         >
-          Review Documentation
+          {t("api.reviewDoc")}
         </ActionButton>
       </div>
 
-      {busy === "analyze" && (
-        <LoadingState label={loadingLabel("analyze")} />
-      )}
+      {busy === "analyze" && <LoadingState label={loadingLabel("analyze")} />}
 
       <SectionCard
-        title="Structured API Summary"
+        title={t("workspace.structuredSummary")}
         icon={<Boxes className="h-4 w-4" />}
-        description="AI-extracted overview of this endpoint."
+        description={t("workspace.structuredSummaryDesc")}
         contentClassName="premium-content !p-4"
       >
         <StructuredSummary project={project} />
       </SectionCard>
 
       <SectionCard
-        title="Missing Information"
+        title={t("workspace.missingInformation")}
         icon={<SearchX className="h-4 w-4" />}
-        description="Facts to confirm before publishing."
+        description={t("workspace.missingInformationDesc")}
         contentClassName="premium-content !p-4"
       >
         {busy === "missing_info" ? (
@@ -86,12 +86,12 @@ export function AiReviewPanel({
       </SectionCard>
 
       <SectionCard
-        title="Engineer Questions"
+        title={t("workspace.engineerQuestions")}
         icon={<MessagesSquare className="h-4 w-4" />}
-        description="Lightweight tracker for facts you need from engineers."
+        description={t("workspace.engineerQuestionsDesc")}
         actions={
           openCount > 0 ? (
-            <Badge tone="muted">{openCount} open</Badge>
+            <Badge tone="muted">{t("workspace.openCount", { count: openCount })}</Badge>
           ) : undefined
         }
         contentClassName="premium-content !p-4"
@@ -108,9 +108,9 @@ export function AiReviewPanel({
       </SectionCard>
 
       <SectionCard
-        title="Review Issues"
+        title={t("workspace.reviewIssues")}
         icon={<AlertTriangle className="h-4 w-4" />}
-        description="Detected before the docs are published."
+        description={t("workspace.reviewIssuesDesc")}
         contentClassName="premium-content !p-4"
       >
         {busy === "review_doc" ? (

@@ -11,13 +11,16 @@ import type {
   TargetReader,
 } from "@/lib/types";
 import { DEFAULT_STYLE_GUIDE, SAMPLE_KOREAN_SOURCE } from "@/lib/sample";
+import { useAppPreferences } from "@/components/shell/AppPreferencesProvider";
+import {
+  getReaderOptions,
+  getStyleOptions,
+} from "@/lib/i18n/helpers";
 import SectionCard from "./SectionCard";
 import SelectField from "./SelectField";
 import ActionButton from "./ActionButton";
 import LoadingState from "./LoadingState";
-import LanguageWorkflowSelector, {
-  WORKFLOW_OPTIONS,
-} from "./LanguageWorkflowSelector";
+import LanguageWorkflowSelector from "./LanguageWorkflowSelector";
 import TerminologyMapper from "./TerminologyMapper";
 import GlobalStyleGuidePanel from "./GlobalStyleGuidePanel";
 import { PriorityBadge } from "./Badges";
@@ -32,28 +35,10 @@ type Props = {
   onApply: (text: string) => void;
 };
 
-const STYLE_OPTIONS = [
-  { value: "api_reference", label: "API reference" },
-  { value: "tutorial", label: "Tutorial" },
-  { value: "release_note", label: "Release note" },
-  { value: "engineer_question", label: "Engineer question" },
-  { value: "error_explanation", label: "Error explanation" },
-  { value: "ui_copy", label: "UI copy" },
-  { value: "faq", label: "FAQ" },
-];
-
-const READER_OPTIONS = [
-  { value: "beginner", label: "Beginner developer" },
-  { value: "frontend", label: "Frontend developer" },
-  { value: "backend", label: "Backend developer" },
-  { value: "technical_writer", label: "Technical writer" },
-];
-
 function workflowLanguages(workflow: GlobalDocsWorkflow): {
   source: LanguageCode;
   target: LanguageCode;
 } {
-  // Every supported workflow targets English output; only the source differs.
   const source: LanguageCode =
     workflow === "english_source_to_english_docs" ? "en" : "ko";
   return { source, target: "en" };
@@ -77,6 +62,10 @@ export default function GlobalDocsMode({
   onReview,
   onApply,
 }: Props) {
+  const { t } = useAppPreferences();
+  const styleOptions = getStyleOptions(t);
+  const readerOptions = getReaderOptions(t);
+
   const [workflow, setWorkflow] = useState<GlobalDocsWorkflow>(
     "korean_source_to_english_docs"
   );
@@ -87,7 +76,6 @@ export default function GlobalDocsMode({
   const [styleGuide, setStyleGuide] = useState(DEFAULT_STYLE_GUIDE);
   const [copied, setCopied] = useState<"" | "english" | "applied">("");
 
-  const option = WORKFLOW_OPTIONS.find((o) => o.value === workflow)!;
   const { source, target } = workflowLanguages(workflow);
 
   function flash(kind: "english" | "applied") {
@@ -133,7 +121,6 @@ export default function GlobalDocsMode({
 
   return (
     <div className="space-y-4">
-      {/* Hero / controls */}
       <div className="rounded-2xl border border-brand-100 bg-gradient-to-br from-brand-50 to-white p-5 shadow-sm">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
@@ -141,27 +128,24 @@ export default function GlobalDocsMode({
               <span className="inline-flex h-6 w-6 items-center justify-center rounded-lg bg-brand-600 text-xs font-bold text-white">
                 글
               </span>
-              Global Docs Mode
+              {t("globalDocs.title")}
             </h2>
-            <p className="mt-1 text-sm text-slate-600">
-              Move from Korean engineering notes to global developer
-              documentation.
-            </p>
-            <p className="text-xs text-slate-400">
-              Convert Korean engineering notes into global developer
-              documentation.
-            </p>
+            <p className="mt-1 text-sm text-slate-600">{t("globalDocs.subtitle")}</p>
+            <p className="text-xs text-slate-400">{t("globalDocs.subtitleShort")}</p>
           </div>
           <div className="flex flex-wrap gap-1.5">
             <LangBadge
-              label="Source:"
-              value={source === "ko" ? "Korean" : "English"}
+              label={`${t("globalDocs.sourceLabel")}:`}
+              value={source === "ko" ? t("options.langKorean") : t("options.langEnglish")}
             />
             <LangBadge
-              label="Output:"
-              value={target === "en" ? "English" : "Korean"}
+              label={`${t("globalDocs.outputLabel")}:`}
+              value={target === "en" ? t("options.langEnglish") : t("options.langKorean")}
             />
-            <LangBadge label="Style:" value="Developer Docs" />
+            <LangBadge
+              label={`${t("globalDocs.styleLabel")}:`}
+              value={t("globalDocs.devDocsStyle")}
+            />
           </div>
         </div>
 
@@ -171,16 +155,16 @@ export default function GlobalDocsMode({
 
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
           <SelectField
-            label="Target style"
+            label={t("globalDocs.targetStyle")}
             value={targetStyle}
             onChange={(v) => setTargetStyle(v as TechnicalEnglishTargetStyle)}
-            options={STYLE_OPTIONS}
+            options={styleOptions}
           />
           <SelectField
-            label="Target reader"
+            label={t("globalDocs.targetReader")}
             value={targetReader}
             onChange={(v) => setTargetReader(v as TargetReader)}
-            options={READER_OPTIONS}
+            options={readerOptions}
           />
         </div>
 
@@ -190,60 +174,60 @@ export default function GlobalDocsMode({
             onClick={() => setSourceText(SAMPLE_KOREAN_SOURCE)}
             disabled={converting}
           >
-            Load Korean API Sample
+            {t("globalDocs.loadSample")}
           </ActionButton>
           <ActionButton
             variant="primary"
             onClick={handleConvert}
             loading={converting}
-            loadingText="영문 문서 변환 중…"
+            loadingText={t("loading.global_docs_convert")}
             disabled={converting || !sourceText.trim()}
           >
-            Convert to English Docs
+            {t("globalDocs.convert")}
           </ActionButton>
           <ActionButton
             onClick={handleReview}
             loading={reviewing}
-            loadingText="언어 품질 리뷰 중…"
+            loadingText={t("loading.language_quality_review")}
             disabled={reviewing || !englishOutput}
-            title="현재 영문 결과의 언어 품질을 리뷰합니다"
+            title={t("globalDocs.reviewTooltip")}
           >
-            Language Quality Review
+            {t("globalDocs.review")}
           </ActionButton>
         </div>
       </div>
 
-      {/* Bilingual Documentation Workspace */}
       <SectionCard
-        title="Bilingual Documentation Workspace"
-        description="Korean → English. 구조를 잃지 않고 원문과 영문 문서를 나란히 다룹니다."
+        title={t("globalDocs.bilingualTitle")}
+        description={t("globalDocs.bilingualDesc")}
         collapsible={false}
       >
         <div className="grid gap-3 lg:grid-cols-[1fr_auto_1fr] lg:items-stretch">
-          {/* Korean source */}
           <div className="flex flex-col rounded-lg border border-slate-200 bg-white p-3">
             <div className="mb-2 flex items-center justify-between">
               <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                {source === "ko" ? "Korean Source" : "English Source"}
+                {source === "ko"
+                  ? t("globalDocs.koreanSource")
+                  : t("globalDocs.englishSource")}
               </h4>
               <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[11px] font-medium text-slate-500">
                 {source.toUpperCase()}
               </span>
             </div>
             <p className="mb-2 text-[11px] text-slate-400">
-              Paste {source === "ko" ? "Korean" : "English"} API notes from
-              engineers.
+              {source === "ko"
+                ? t("globalDocs.pasteSourceKo")
+                : t("globalDocs.pasteSourceEn")}
             </p>
             <textarea
               value={sourceText}
               onChange={(e) => setSourceText(e.target.value)}
               rows={10}
-              placeholder="예: 이 API는 유저를 생성할 때 사용합니다. API 토큰이 필요하고, user_id는 필수입니다."
+              placeholder={t("globalDocs.sourcePlaceholderKo")}
               className="flex-1 resize-y rounded-md border border-slate-300 bg-white px-2.5 py-2 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
             />
           </div>
 
-          {/* Arrow indicator */}
           <div className="flex items-center justify-center">
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-100 text-brand-600">
               <svg
@@ -262,21 +246,20 @@ export default function GlobalDocsMode({
             </div>
           </div>
 
-          {/* English documentation */}
           <div className="flex flex-col rounded-lg border border-brand-200 bg-brand-50/40 p-3">
             <div className="mb-2 flex items-center justify-between">
               <h4 className="text-xs font-semibold uppercase tracking-wide text-brand-700">
-                English Documentation
+                {t("globalDocs.englishDocs")}
               </h4>
               <span className="rounded bg-brand-100 px-1.5 py-0.5 text-[11px] font-medium text-brand-700">
                 EN
               </span>
             </div>
             <p className="mb-2 text-[11px] text-slate-400">
-              Developer-facing English documentation.
+              {t("globalDocs.devEnglishDesc")}
             </p>
             {converting ? (
-              <LoadingState label="영문 문서 변환 중…" />
+              <LoadingState label={t("loading.global_docs_convert")} />
             ) : englishOutput ? (
               <div className="flex flex-1 flex-col">
                 <div className="flex-1 rounded-md border border-slate-200 bg-white p-2.5 text-sm leading-relaxed text-slate-800">
@@ -293,31 +276,34 @@ export default function GlobalDocsMode({
                     disabled={!canApply}
                     title={
                       canApply
-                        ? "현재 문서 초안에 추가합니다"
-                        : "먼저 API Workspace에서 Analyze API로 프로젝트를 생성하세요"
+                        ? t("globalDocs.applyDraftTooltip")
+                        : t("globalDocs.applyDraftDisabledTooltip")
                     }
                   >
-                    {copied === "applied" ? "적용됨!" : "Apply to Documentation Draft"}
+                    {copied === "applied"
+                      ? t("globalDocs.applied")
+                      : t("globalDocs.applyDraft")}
                   </ActionButton>
                   <ActionButton size="sm" variant="secondary" onClick={copyEnglish}>
-                    {copied === "english" ? "복사됨!" : "Copy English"}
+                    {copied === "english"
+                      ? t("globalDocs.copied")
+                      : t("globalDocs.copyEnglish")}
                   </ActionButton>
                 </div>
               </div>
             ) : (
               <div className="flex flex-1 items-center justify-center rounded-md border border-dashed border-slate-300 p-4 text-center text-xs text-slate-400">
-                변환을 실행하면 개발자용 영문 문서가 여기에 표시됩니다.
+                {t("globalDocs.emptyConvert")}
               </div>
             )}
           </div>
         </div>
       </SectionCard>
 
-      {/* Expression Mapping + Terminology + Style guide + Quality review */}
       <div className="grid gap-4 lg:grid-cols-2">
         <SectionCard
-          title="Expression Mapping"
-          description="한국어 기술 표현이 자연스러운 API 문서 영어로 바뀌는 과정을 봅니다."
+          title={t("globalDocs.expressionMapping")}
+          description={t("globalDocs.expressionMappingDesc")}
           collapsible={false}
         >
           {result && result.expressionMappings.length > 0 ? (
@@ -328,7 +314,9 @@ export default function GlobalDocsMode({
                   className="rounded-md border border-slate-200 bg-slate-50/60 p-2.5"
                 >
                   <p className="text-xs text-slate-500">
-                    <span className="font-medium text-slate-600">KO:</span>{" "}
+                    <span className="font-medium text-slate-600">
+                      {t("globalDocs.koLabel")}:
+                    </span>{" "}
                     {m.koreanExpression}
                   </p>
                   {m.literalTranslation && (
@@ -365,23 +353,21 @@ export default function GlobalDocsMode({
               ))}
             </ul>
           ) : (
-            <p className="text-xs text-slate-400">
-              변환을 실행하면 표현 매핑이 여기에 표시됩니다.
-            </p>
+            <p className="text-xs text-slate-400">{t("globalDocs.emptyMapping")}</p>
           )}
         </SectionCard>
 
         <SectionCard
-          title="Terminology Notes"
-          description="Korean-English 기술 용어를 문서 전반에서 일관되게 유지합니다."
+          title={t("globalDocs.terminologyNotes")}
+          description={t("globalDocs.terminologyDesc")}
           collapsible={false}
         >
           <TerminologyMapper notes={result?.terminologyNotes ?? []} />
         </SectionCard>
 
         <SectionCard
-          title="Global Style Guide"
-          description="이 규칙은 변환과 리뷰에 적용됩니다."
+          title={t("globalDocs.styleGuideTitle")}
+          description={t("globalDocs.styleGuideDesc")}
           collapsible={false}
         >
           <GlobalStyleGuidePanel
@@ -392,12 +378,12 @@ export default function GlobalDocsMode({
         </SectionCard>
 
         <SectionCard
-          title="Language Quality Review"
-          description="직역 문제와 부자연스러운 기술 영어를 찾습니다."
+          title={t("globalDocs.qualityReview")}
+          description={t("globalDocs.qualityReviewDesc")}
           collapsible={false}
         >
           {reviewing ? (
-            <LoadingState label="언어 품질 리뷰 중…" />
+            <LoadingState label={t("loading.language_quality_review")} />
           ) : result && result.languageQualityIssues.length > 0 ? (
             <ul className="space-y-2">
               {result.languageQualityIssues.map((q, i) => (
@@ -411,7 +397,9 @@ export default function GlobalDocsMode({
                   </div>
                   {q.suggestion && (
                     <p className="mt-1 rounded bg-slate-50 px-2 py-1 text-xs text-slate-600">
-                      <span className="font-medium text-slate-700">제안:</span>{" "}
+                      <span className="font-medium text-slate-700">
+                        {t("review.suggestion")}:
+                      </span>{" "}
                       {q.suggestion}
                     </p>
                   )}
@@ -422,10 +410,7 @@ export default function GlobalDocsMode({
               ))}
             </ul>
           ) : (
-            <p className="text-xs text-slate-400">
-              'Language Quality Review'를 실행하면 직역·부자연스러운 표현 이슈가
-              표시됩니다.
-            </p>
+            <p className="text-xs text-slate-400">{t("globalDocs.emptyQuality")}</p>
           )}
         </SectionCard>
       </div>

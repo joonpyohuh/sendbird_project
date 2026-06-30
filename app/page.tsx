@@ -8,6 +8,7 @@ import { AiReviewPanel } from "@/components/workspace/ai-review-panel";
 import { DocumentationPanel } from "@/components/workspace/documentation-panel";
 import ShellControls from "@/components/shell/ShellControls";
 import { useAppPreferences } from "@/components/shell/AppPreferencesProvider";
+import { getPriorityLabel, useTranslatedOptions } from "@/lib/i18n/helpers";
 import { callAi } from "@/lib/client";
 import {
   normalizeEngineerQuestions,
@@ -38,6 +39,7 @@ const PROJECT_KEY = "adw_project_v1";
 
 export default function Page() {
   const { t } = useAppPreferences();
+  const { readerOptions, authOptions } = useTranslatedOptions();
   const [form, setForm] = useState<RawFormInput>(EMPTY_FORM);
   const [project, setProject] = useState<ApiDocProject | null>(null);
   const [busy, setBusy] = useState<AiAction | null>(null);
@@ -344,11 +346,11 @@ export default function Page() {
       .map((q, i) => {
         const lines = [
           `${i + 1}. ${q.question}`,
-          `   - Reason: ${q.reason}`,
-          `   - Priority: ${q.priority}`,
+          `   - ${t("engineer.reason")}: ${q.reason}`,
+          `   - ${t("engineer.priority")}: ${getPriorityLabel(t, q.priority)}`,
         ];
-        if (q.owner) lines.push(`   - Owner: ${q.owner}`);
-        if (q.answer) lines.push(`   - Answer: ${q.answer}`);
+        if (q.owner) lines.push(`   - ${t("engineer.owner")}: ${q.owner}`);
+        if (q.answer) lines.push(`   - ${t("engineer.answer")}: ${q.answer}`);
         return lines.join("\n");
       })
       .join("\n\n");
@@ -366,20 +368,6 @@ export default function Page() {
   const isBusy = busy !== null;
 
   const loadingLabel = (action: AiAction) => t(`loading.${action}`);
-
-  const readerOptions = [
-    { value: "beginner", label: t("api.readerBeginner") },
-    { value: "frontend", label: t("api.readerFrontend") },
-    { value: "backend", label: t("api.readerBackend") },
-    { value: "technical_writer", label: t("api.readerTw") },
-  ];
-
-  const authOptions = [
-    { value: "api_token", label: t("api.authApiToken") },
-    { value: "bearer_token", label: t("api.authBearer") },
-    { value: "none", label: t("api.authNone") },
-    { value: "unknown", label: t("api.authUnknown") },
-  ];
 
   const fileBaseName =
     (project?.title || "api-documentation")

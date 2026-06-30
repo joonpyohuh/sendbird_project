@@ -1,28 +1,31 @@
+"use client";
+
 import type { TerminologyNote } from "@/lib/types";
+import { useAppPreferences } from "@/components/shell/AppPreferencesProvider";
 
 export default function TerminologyMapper({
   notes,
 }: {
   notes: TerminologyNote[];
 }) {
+  const { t } = useAppPreferences();
+
   if (notes.length === 0) {
     return (
-      <p className="text-xs text-slate-400">
-        변환을 실행하면 한국어-영어 용어 매핑이 여기에 표시됩니다.
-      </p>
+      <p className="text-xs text-slate-400">{t("globalDocs.emptyTerminology")}</p>
     );
   }
 
   return (
     <div className="space-y-2">
-      {notes.map((t, i) => (
+      {notes.map((note, i) => (
         <div
           key={i}
           className="rounded-lg border border-slate-200 bg-white p-3 text-sm"
         >
           <div className="flex flex-wrap items-center gap-1.5">
             <span className="inline-flex items-center rounded-md bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700 ring-1 ring-inset ring-slate-200">
-              {t.koreanTerm || "—"}
+              {note.koreanTerm || "—"}
             </span>
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -38,20 +41,20 @@ export default function TerminologyMapper({
               />
             </svg>
             <span className="inline-flex items-center rounded-md bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700 ring-1 ring-inset ring-emerald-200">
-              {t.recommendedEnglish || "—"}
+              {note.recommendedEnglish || "—"}
             </span>
-            {t.avoid && (
+            {note.avoid && (
               <span className="inline-flex items-center rounded-md bg-rose-50 px-2 py-0.5 text-xs font-medium text-rose-600 ring-1 ring-inset ring-rose-200">
-                avoid: {t.avoid}
+                {t("globalDocs.avoidLabel")}: {note.avoid}
               </span>
             )}
           </div>
-          {t.reason && (
-            <p className="mt-1.5 text-xs text-slate-500">{t.reason}</p>
+          {note.reason && (
+            <p className="mt-1.5 text-xs text-slate-500">{note.reason}</p>
           )}
-          {t.exampleUsage && (
+          {note.exampleUsage && (
             <p className="mt-1 rounded bg-slate-50 px-2 py-1 text-xs italic text-slate-600">
-              {t.exampleUsage}
+              {note.exampleUsage}
             </p>
           )}
         </div>

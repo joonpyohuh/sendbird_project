@@ -20,7 +20,7 @@ type AppPreferencesContextValue = {
   setTheme: (theme: Theme) => void;
   toggleLocale: () => void;
   toggleTheme: () => void;
-  t: (path: string) => string;
+  t: (path: string, vars?: Record<string, string | number>) => string;
   hydrated: boolean;
 };
 

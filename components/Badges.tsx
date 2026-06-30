@@ -1,3 +1,5 @@
+"use client";
+
 import type {
   AuthType,
   HttpMethod,
@@ -6,6 +8,14 @@ import type {
   ReviewIssueCategory,
   TargetReader,
 } from "@/lib/types";
+import { useAppPreferences } from "@/components/shell/AppPreferencesProvider";
+import {
+  getAuthLabel,
+  getCategoryLabel,
+  getPriorityLabel,
+  getReaderLabel,
+  getStatusLabel,
+} from "@/lib/i18n/helpers";
 
 const METHOD_STYLES: Record<HttpMethod, string> = {
   GET: "bg-emerald-50 text-emerald-700 ring-emerald-200",
@@ -27,6 +37,7 @@ const STATUS_STYLES: Record<QuestionStatus, string> = {
   applied: "bg-emerald-50 text-emerald-700 ring-emerald-200",
 };
 
+/** @deprecated use getReaderLabel(t, reader) */
 export const READER_LABELS: Record<TargetReader, string> = {
   beginner: "Beginner developer",
   frontend: "Frontend developer",
@@ -34,34 +45,12 @@ export const READER_LABELS: Record<TargetReader, string> = {
   technical_writer: "Technical writer",
 };
 
+/** @deprecated use getAuthLabel(t, auth) */
 export const AUTH_LABELS: Record<AuthType, string> = {
   api_token: "API token",
   bearer_token: "Bearer token",
   none: "None",
   unknown: "Unknown",
-};
-
-export const CATEGORY_LABELS: Record<ReviewIssueCategory, string> = {
-  clarity: "Clarity",
-  consistency: "Consistency",
-  terminology: "Terminology",
-  security: "Security",
-  missing_example: "Missing example",
-  client_server_confusion: "Client/Server",
-  accuracy: "Accuracy",
-  structure: "Structure",
-};
-
-const PRIORITY_LABELS: Record<Priority, string> = {
-  high: "High",
-  medium: "Medium",
-  low: "Low",
-};
-
-const STATUS_LABELS: Record<QuestionStatus, string> = {
-  open: "Open",
-  answered: "Answered",
-  applied: "Applied",
 };
 
 function base(extra: string) {
@@ -73,16 +62,20 @@ export function MethodBadge({ method }: { method: HttpMethod }) {
 }
 
 export function PriorityBadge({ priority }: { priority: Priority }) {
+  const { t } = useAppPreferences();
   return (
     <span className={base(PRIORITY_STYLES[priority])}>
-      {PRIORITY_LABELS[priority]}
+      {getPriorityLabel(t, priority)}
     </span>
   );
 }
 
 export function StatusBadge({ status }: { status: QuestionStatus }) {
+  const { t } = useAppPreferences();
   return (
-    <span className={base(STATUS_STYLES[status])}>{STATUS_LABELS[status]}</span>
+    <span className={base(STATUS_STYLES[status])}>
+      {getStatusLabel(t, status)}
+    </span>
   );
 }
 
@@ -91,9 +84,10 @@ export function CategoryBadge({
 }: {
   category: ReviewIssueCategory;
 }) {
+  const { t } = useAppPreferences();
   return (
     <span className={base("bg-brand-50 text-brand-700 ring-brand-200")}>
-      {CATEGORY_LABELS[category]}
+      {getCategoryLabel(t, category)}
     </span>
   );
 }
@@ -105,3 +99,5 @@ export function Pill({ children }: { children: React.ReactNode }) {
     </span>
   );
 }
+
+export { getReaderLabel, getAuthLabel };

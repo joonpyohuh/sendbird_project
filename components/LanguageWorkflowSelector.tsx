@@ -1,52 +1,25 @@
 "use client";
 
 import type { GlobalDocsWorkflow } from "@/lib/types";
+import { useAppPreferences } from "@/components/shell/AppPreferencesProvider";
+import { getWorkflowOptions } from "@/lib/i18n/helpers";
 
 type Props = {
   value: GlobalDocsWorkflow;
   onChange: (value: GlobalDocsWorkflow) => void;
 };
 
-export const WORKFLOW_OPTIONS: {
-  value: GlobalDocsWorkflow;
-  label: string;
-  source: string;
-  target: string;
-}[] = [
-  {
-    value: "korean_source_to_english_docs",
-    label: "Korean Source → English Docs",
-    source: "Korean",
-    target: "English",
-  },
-  {
-    value: "english_source_to_english_docs",
-    label: "English Source → English Docs",
-    source: "English",
-    target: "English",
-  },
-  {
-    value: "korean_review_to_english_polish",
-    label: "Korean Review → English Polish",
-    source: "Korean",
-    target: "English",
-  },
-  {
-    value: "bilingual_compare",
-    label: "Bilingual Compare",
-    source: "Korean",
-    target: "English",
-  },
-];
-
 export default function LanguageWorkflowSelector({ value, onChange }: Props) {
+  const { t } = useAppPreferences();
+  const workflowOptions = getWorkflowOptions(t);
+
   return (
     <div
       className="inline-flex flex-wrap gap-1 rounded-xl border border-slate-200 bg-white p-1 shadow-sm"
       role="tablist"
-      aria-label="Language workflow"
+      aria-label={t("options.workflowKoToEn")}
     >
-      {WORKFLOW_OPTIONS.map((opt) => {
+      {workflowOptions.map((opt) => {
         const active = opt.value === value;
         return (
           <button

@@ -3,6 +3,7 @@
 import type { EngineerQuestion } from "@/lib/types";
 import { PriorityBadge, StatusBadge } from "./Badges";
 import ActionButton from "./ActionButton";
+import { useAppPreferences } from "@/components/shell/AppPreferencesProvider";
 
 type Props = {
   questions: EngineerQuestion[];
@@ -15,21 +16,20 @@ export default function EngineerQuestionsPanel({
   onUpdate,
   onCopyAll,
 }: Props) {
+  const { t } = useAppPreferences();
+
   if (questions.length === 0) {
-    return (
-      <p className="text-xs text-slate-400">
-        아직 엔지니어 질문이 없습니다. 'Generate Engineer Questions'를 실행해
-        보세요.
-      </p>
-    );
+    return <p className="text-xs text-slate-400">{t("engineer.empty")}</p>;
   }
 
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <p className="text-xs text-slate-500">{questions.length}개 질문</p>
+        <p className="text-xs text-slate-500">
+          {t("engineer.questionCount", { count: questions.length })}
+        </p>
         <ActionButton size="sm" variant="ghost" onClick={onCopyAll}>
-          질문 복사
+          {t("engineer.copyAll")}
         </ActionButton>
       </div>
 
@@ -48,13 +48,13 @@ export default function EngineerQuestionsPanel({
 
           {q.reason && (
             <p className="mt-1 text-xs text-slate-500">
-              <span className="font-medium text-slate-600">Reason:</span>{" "}
+              <span className="font-medium text-slate-600">{t("engineer.reason")}:</span>{" "}
               {q.reason}
             </p>
           )}
           {q.owner && (
             <p className="mt-0.5 text-xs text-slate-500">
-              <span className="font-medium text-slate-600">Owner:</span>{" "}
+              <span className="font-medium text-slate-600">{t("engineer.owner")}:</span>{" "}
               {q.owner}
             </p>
           )}
@@ -62,7 +62,7 @@ export default function EngineerQuestionsPanel({
           <textarea
             value={q.answer ?? ""}
             rows={2}
-            placeholder="엔지니어 답변을 여기에 기록하세요…"
+            placeholder={t("engineer.answerPlaceholder")}
             onChange={(e) => onUpdate(q.id, { answer: e.target.value })}
             className="mt-2 w-full resize-y rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-xs text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
           />
@@ -71,12 +71,10 @@ export default function EngineerQuestionsPanel({
             <ActionButton
               size="sm"
               variant="secondary"
-              onClick={() =>
-                onUpdate(q.id, { status: "answered" })
-              }
+              onClick={() => onUpdate(q.id, { status: "answered" })}
               disabled={q.status === "answered" || q.status === "applied"}
             >
-              Mark Answered
+              {t("engineer.markAnswered")}
             </ActionButton>
             <ActionButton
               size="sm"
@@ -86,7 +84,7 @@ export default function EngineerQuestionsPanel({
               }
               disabled={q.status === "applied"}
             >
-              Mark Applied
+              {t("engineer.markApplied")}
             </ActionButton>
           </div>
         </div>

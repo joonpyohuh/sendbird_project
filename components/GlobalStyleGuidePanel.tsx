@@ -1,6 +1,8 @@
 "use client";
 
 import type { TechnicalEnglishStyleCheck } from "@/lib/types";
+import { useAppPreferences } from "@/components/shell/AppPreferencesProvider";
+import { getStyleCheckStatus } from "@/lib/i18n/helpers";
 
 type Props = {
   value: string;
@@ -8,28 +10,18 @@ type Props = {
   checks: TechnicalEnglishStyleCheck[];
 };
 
-const STATUS_STYLES: Record<
-  TechnicalEnglishStyleCheck["status"],
-  { label: string; cls: string }
-> = {
-  passed: { label: "Passed", cls: "bg-emerald-50 text-emerald-700 ring-emerald-200" },
-  needs_revision: {
-    label: "Needs revision",
-    cls: "bg-amber-50 text-amber-700 ring-amber-200",
-  },
-  not_applicable: { label: "N/A", cls: "bg-slate-100 text-slate-600 ring-slate-200" },
-};
-
 export default function GlobalStyleGuidePanel({
   value,
   onChange,
   checks,
 }: Props) {
+  const { t } = useAppPreferences();
+
   return (
     <div className="space-y-3">
       <label className="block">
         <span className="mb-1 block text-xs font-medium text-slate-600">
-          Style guide rules (AI 변환·리뷰에 적용됨)
+          {t("styleGuidePanel.rulesLabel")}
         </span>
         <textarea
           value={value}
@@ -42,11 +34,11 @@ export default function GlobalStyleGuidePanel({
       {checks.length > 0 && (
         <div>
           <p className="mb-1.5 text-[11px] font-medium uppercase tracking-wide text-slate-400">
-            Style guide checks
+            {t("styleGuidePanel.checksLabel")}
           </p>
           <ul className="space-y-1.5">
             {checks.map((c, i) => {
-              const s = STATUS_STYLES[c.status];
+              const s = getStyleCheckStatus(t, c.status);
               return (
                 <li key={i} className="flex items-start gap-2 text-xs">
                   <span

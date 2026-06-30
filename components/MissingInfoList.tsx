@@ -1,17 +1,18 @@
+"use client";
+
 import type { MissingInfoItem } from "@/lib/types";
 import { PriorityBadge } from "./Badges";
+import { useAppPreferences } from "@/components/shell/AppPreferencesProvider";
 
 export default function MissingInfoList({
   items,
 }: {
   items: MissingInfoItem[];
 }) {
+  const { t } = useAppPreferences();
+
   if (items.length === 0) {
-    return (
-      <p className="text-xs text-slate-400">
-        아직 누락 정보가 없습니다. 'Find Missing Info'를 실행해 보세요.
-      </p>
-    );
+    return <p className="text-xs text-slate-400">{t("missingInfo.empty")}</p>;
   }
 
   return (
@@ -30,7 +31,7 @@ export default function MissingInfoList({
           )}
           {m.suggestedQuestion && (
             <p className="mt-1.5 rounded bg-slate-50 px-2 py-1 text-xs italic text-slate-600">
-              제안 질문: {m.suggestedQuestion}
+              {t("engineer.suggestedQuestion")}: {m.suggestedQuestion}
             </p>
           )}
         </li>

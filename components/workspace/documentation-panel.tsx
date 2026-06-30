@@ -5,6 +5,7 @@ import { Eye, Code, RefreshCw, Copy, Download } from "lucide-react";
 import { marked } from "marked";
 import type { ApiDocProject, TargetReader } from "@/lib/types";
 import DocumentationImprovementLoop from "@/components/DocumentationImprovementLoop";
+import { useAppPreferences } from "@/components/shell/AppPreferencesProvider";
 import { Tabs, ActionButton, EmptyState } from "./primitives";
 
 marked.setOptions({ gfm: true, breaks: false });
@@ -18,12 +19,6 @@ type DocumentationPanelProps = {
   onApplyToMainDraft: (text: string) => void;
 };
 
-const tabs = [
-  { id: "preview", label: "Preview", icon: <Eye className="h-3.5 w-3.5" /> },
-  { id: "markdown", label: "Markdown", icon: <Code className="h-3.5 w-3.5" /> },
-  { id: "loop", label: "Improvement Loop", icon: <RefreshCw className="h-3.5 w-3.5" /> },
-];
-
 export function DocumentationPanel({
   project,
   markdown,
@@ -32,16 +27,30 @@ export function DocumentationPanel({
   targetReader,
   onApplyToMainDraft,
 }: DocumentationPanelProps) {
+  const { t } = useAppPreferences();
   const [tab, setTab] = useState("preview");
   const [copied, setCopied] = useState(false);
+
+  const tabs = useMemo(
+    () => [
+      { id: "preview", label: t("workspace.tabPreview"), icon: <Eye className="h-3.5 w-3.5" /> },
+      { id: "markdown", label: t("workspace.tabMarkdown"), icon: <Code className="h-3.5 w-3.5" /> },
+      {
+        id: "loop",
+        label: t("workspace.tabLoop"),
+        icon: <RefreshCw className="h-3.5 w-3.5" />,
+      },
+    ],
+    [t]
+  );
 
   const html = useMemo(() => {
     try {
       return marked.parse(markdown || "") as string;
     } catch {
-      return "<p>Unable to render preview.</p>";
+      return `<p>${t("workspace.previewError")}</p>`;
     }
-  }, [markdown]);
+  }, [markdown, t]);
 
   async function copyMarkdown() {
     try {
@@ -69,7 +78,7 @@ export function DocumentationPanel({
     <div className="flex h-full flex-col rounded-2xl border border-border bg-card shadow-sm shadow-primary/5">
       <div className="border-b border-border p-3">
         <p className="mb-2 px-1 text-xs font-semibold uppercase tracking-wide text-text-muted">
-          Documentation
+          {t("workspace.documentation")}
         </p>
         <Tabs tabs={tabs} active={tab} onChange={setTab} />
       </div>
@@ -78,8 +87,8 @@ export function DocumentationPanel({
           <>
             {!markdown.trim() ? (
               <EmptyState
-                title="No documentation yet"
-                description="Run Generate Documentation to create a Markdown draft here."
+                title={t("workspace.noDocTitle")}
+                description={t("workspace.noDocDesc")}
               />
             ) : (
               <article
@@ -94,8 +103,8 @@ export function DocumentationPanel({
           <div className="space-y-3">
             {!markdown.trim() ? (
               <EmptyState
-                title="No documentation yet"
-                description="Run Generate Documentation to create a Markdown draft here."
+                title={t("workspace.noDocTitle")}
+                description={t("workspace.noDocDesc")}
               />
             ) : (
               <>
@@ -113,7 +122,7 @@ export function DocumentationPanel({
                     icon={<Copy className="h-3.5 w-3.5" />}
                     onClick={copyMarkdown}
                   >
-                    {copied ? "Copied!" : "Copy Markdown"}
+                    {copied ? t("workspace.copied") : t("workspace.copyMarkdown")}
                   </ActionButton>
                   <ActionButton
                     variant="secondary"
@@ -121,7 +130,7 @@ export function DocumentationPanel({
                     icon={<Download className="h-3.5 w-3.5" />}
                     onClick={exportMarkdown}
                   >
-                    Export .md
+                    {t("workspace.exportMd")}
                   </ActionButton>
                 </div>
               </>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { marked } from "marked";
 import type {
   ApiDocProject,
@@ -25,6 +25,11 @@ import {
   registerIssueKeys,
 } from "@/lib/normalize";
 import { DEFAULT_STYLE_GUIDE } from "@/lib/sample";
+import { useAppPreferences } from "@/components/shell/AppPreferencesProvider";
+import {
+  getLoopModeOptions,
+  getScoreRows,
+} from "@/lib/i18n/helpers";
 import SectionCard from "./SectionCard";
 import ActionButton from "./ActionButton";
 import SelectField from "./SelectField";
@@ -48,48 +53,6 @@ type LoopPhase =
   | "improving"
   | "scoring"
   | "checking_style";
-
-const PHASE_LABELS: Record<LoopPhase, string> = {
-  idle: "",
-  running: "Running iteration…",
-  reviewing: "Reviewing documentation…",
-  improving: "Improving draft…",
-  scoring: "Scoring quality…",
-  checking_style: "Checking style guide…",
-};
-
-const MODE_OPTIONS: { value: LoopMode; label: string; description: string }[] = [
-  {
-    value: "conservative",
-    label: "Conservative",
-    description:
-      "Only make safe wording, structure, and clarity improvements. Do not infer missing technical details.",
-  },
-  {
-    value: "balanced",
-    label: "Balanced",
-    description:
-      "Improve clarity, structure, examples, and terminology while preserving all known technical facts.",
-  },
-  {
-    value: "aggressive",
-    label: "Aggressive",
-    description:
-      "Make stronger structural improvements, but still do not invent technical facts.",
-  },
-];
-
-const SCORE_ROWS: { key: keyof QualityScores; label: string }[] = [
-  { key: "overall", label: "Overall" },
-  { key: "accuracy", label: "Accuracy" },
-  { key: "completeness", label: "Completeness" },
-  { key: "clarity", label: "Clarity" },
-  { key: "styleGuide", label: "Style guide" },
-  { key: "developerReadability", label: "Developer readability" },
-  { key: "security", label: "Security" },
-  { key: "technicalEnglish", label: "Technical English" },
-  { key: "structure", label: "Structure" },
-];
 
 function ScoreBar({ label, value }: { label: string; value: number }) {
   const color =
@@ -173,6 +136,21 @@ export default function DocumentationImprovementLoop({
   targetReader,
   onApplyToMainDraft,
 }: Props) {
+  const { t } = useAppPreferences();
+  const modeOptions = useMemo(() => getLoopModeOptions(t), [t]);
+  const scoreRows = useMemo(() => getScoreRows(t), [t]);
+  const phaseLabels = useMemo<Record<LoopPhase, string>>(
+    () => ({
+      idle: "",
+      running: t("loop.phaseRunning"),
+      reviewing: t("loop.phaseReviewing"),
+      improving: t("loop.phaseImproving"),
+      scoring: t("loop.phaseScoring"),
+      checking_style: t("loop.phaseCheckingStyle"),
+    }),
+    [t]
+  );
+
   const [settings, setSettings] =
     useState<ImprovementLoopSettings>(DEFAULT_LOOP_SETTINGS);
   const [styleGuide, setStyleGuide] = useState(DEFAULT_STYLE_GUIDE);
@@ -214,8 +192,7 @@ export default function DocumentationImprovementLoop({
       setLoop((prev) => ({
         ...prev,
         status: "failed",
-        stopReason:
-          "No documentation draft to improve. Generate documentation first.",
+        stopReason: t("loop.noDraftError"),
       }));
       return;
     }
@@ -275,7 +252,7 @@ export default function DocumentationImprovementLoop({
     for (let i = 1; i <= effectiveMax; i++) {
       if (abortRef.current) {
         status = "stopped";
-        finalStopReason = "Loop stopped by user.";
+        finalStopReason = t("loop.stoppedByUser");
         break;
       }
 
@@ -309,8 +286,7 @@ export default function DocumentationImprovementLoop({
             review.scores.overall - lastScore < 3
           ) {
             status = "stopped";
-            finalStopReason =
-              "Score improvement below threshold (< 3 points).";
+            finalStopReason = t("loop.scoreBelowThreshold");
             iterations.push({
               ...review,
               patches: [],
@@ -322,8 +298,7 @@ export default function DocumentationImprovementLoop({
 
           if (hasRepeatedIssue(review.issues, seenIssueKeys)) {
             status = "stopped";
-            finalStopReason =
-              "The same issue appeared again; stopping to avoid redundant iterations.";
+            finalStopReason = t("loop.repeatedIssue");
             iterations.push({
               ...review,
               patches: [],
@@ -396,7 +371,7 @@ export default function DocumentationImprovementLoop({
 
           if (iteration.scores.overall >= settings.targetScore) {
             status = "completed";
-            finalStopReason = "Target quality score reached.";
+            finalStopReason = t("loop.targetReached");
             break;
           }
 
@@ -408,15 +383,14 @@ export default function DocumentationImprovementLoop({
               ))
           ) {
             status = "stopped";
-            finalStopReason =
-              "Remaining high-impact improvements require engineer input.";
+            finalStopReason = t("loop.stoppedEngineer");
             break;
           }
 
           if (review.stopRecommended) {
             status = "stopped";
             finalStopReason =
-              review.stopReason || "Loop stop recommended by reviewer.";
+              review.stopReason || t("loop.stopRecommendedByReviewer");
             break;
           }
         } else {
@@ -460,16 +434,14 @@ export default function DocumentationImprovementLoop({
             iteration.scores.overall - lastScore < 3
           ) {
             status = "stopped";
-            finalStopReason =
-              "Score improvement below threshold (< 3 points).";
+            finalStopReason = t("loop.scoreBelowThreshold");
             iterations.push(iteration);
             break;
           }
 
           if (hasRepeatedIssue(iteration.issues, seenIssueKeys)) {
             status = "stopped";
-            finalStopReason =
-              "The same issue appeared again; stopping to avoid redundant iterations.";
+            finalStopReason = t("loop.repeatedIssue");
             iterations.push(iteration);
             break;
           }
@@ -498,7 +470,7 @@ export default function DocumentationImprovementLoop({
 
           if (iteration.scores.overall >= settings.targetScore) {
             status = "completed";
-            finalStopReason = "Target quality score reached.";
+            finalStopReason = t("loop.targetReached");
             break;
           }
 
@@ -510,22 +482,21 @@ export default function DocumentationImprovementLoop({
               ))
           ) {
             status = "stopped";
-            finalStopReason =
-              "Remaining high-impact improvements require engineer input.";
+            finalStopReason = t("loop.stoppedEngineer");
             break;
           }
 
           if (iteration.stopRecommended) {
             status = "stopped";
             finalStopReason =
-              iteration.stopReason || "Loop stop recommended by reviewer.";
+              iteration.stopReason || t("loop.stopRecommendedByReviewer");
             break;
           }
         }
       } catch (e) {
         status = "failed";
         finalStopReason =
-          e instanceof Error ? e.message : "Improvement loop failed.";
+          e instanceof Error ? e.message : t("loop.failed");
         break;
       }
     }
@@ -533,16 +504,15 @@ export default function DocumentationImprovementLoop({
     if (status === "completed" && !finalStopReason) {
       if (iterations.length >= effectiveMax) {
         status = "stopped";
-        finalStopReason =
-          "Maximum iterations reached. Review the best draft and remaining issues.";
+        finalStopReason = t("loop.stoppedMax");
       } else if (abortRef.current) {
         status = "stopped";
-        finalStopReason = "Loop stopped by user.";
+        finalStopReason = t("loop.stoppedByUser");
       }
     }
 
     finishRunning();
-  }, [project, currentDraft, settings, styleGuide, targetReader]);
+  }, [project, currentDraft, settings, styleGuide, targetReader, t]);
 
   async function copyBestDraft() {
     try {
@@ -555,59 +525,40 @@ export default function DocumentationImprovementLoop({
   }
 
   const isRunning = loop.status === "running";
-  const modeMeta = MODE_OPTIONS.find((m) => m.value === settings.mode);
+  const modeMeta = modeOptions.find((m) => m.value === settings.mode);
   const previewHtml = loop.bestDraft
     ? (marked.parse(loop.bestDraft) as string)
     : "";
 
   return (
     <div className="space-y-4">
-      {/* Hero */}
       <div className="rounded-2xl border border-brand-100 bg-gradient-to-br from-brand-50 to-white p-5 shadow-sm">
-        <h2 className="text-base font-semibold text-slate-900">
-          Documentation Improvement Loop
-        </h2>
-        <p className="mt-1 text-sm text-slate-600">
-          Run an AI review loop to improve documentation quality until it meets
-          your target score.
-        </p>
-        <p className="mt-2 text-xs text-slate-400">
-          Generate → Review → Score → Patch → Re-review → Stop when ready.
-          Token-saving mode applies targeted section patches instead of full
-          rewrites. Loop stops when AI cannot safely proceed without engineer
-          confirmation.
-        </p>
+        <h2 className="text-base font-semibold text-slate-900">{t("loop.title")}</h2>
+        <p className="mt-1 text-sm text-slate-600">{t("loop.subtitle")}</p>
+        <p className="mt-2 text-xs text-slate-400">{t("loop.subtitleDetail")}</p>
       </div>
 
-      {/* Status banner */}
       {loop.status === "completed" && (
         <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-          {loop.stopReason?.includes("Target") ||
-          (loop.finalScore ?? 0) >= settings.targetScore
-            ? "Target quality score reached."
-            : loop.stopReason}
+          {loop.stopReason || t("loop.targetReached")}
         </div>
       )}
       {loop.status === "stopped" && (
         <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-          {loop.stopReason?.includes("engineer")
-            ? "The loop stopped because remaining improvements require engineer input."
-            : loop.stopReason ||
-              "Maximum iterations reached. Review the best draft and remaining issues."}
+          {loop.stopReason || t("loop.stoppedMax")}
         </div>
       )}
       {loop.status === "failed" && (
         <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-          {loop.stopReason || "Improvement loop failed."}
+          {loop.stopReason || t("loop.failed")}
         </div>
       )}
 
       <div className="grid gap-4 lg:grid-cols-2">
-        {/* Loop Settings */}
-        <SectionCard title="Loop Settings" collapsible={false}>
+        <SectionCard title={t("loop.settingsTitle")} collapsible={false}>
           <div className="grid gap-3 sm:grid-cols-2">
             <InputField
-              label="Target quality score"
+              label={t("loop.targetScore")}
               type="number"
               value={String(settings.targetScore)}
               onChange={(v) => {
@@ -616,7 +567,7 @@ export default function DocumentationImprovementLoop({
               }}
             />
             <InputField
-              label="Max iterations"
+              label={t("loop.maxIterations")}
               type="number"
               value={String(settings.maxIterations)}
               onChange={(v) => {
@@ -628,7 +579,7 @@ export default function DocumentationImprovementLoop({
               }}
             />
             <InputField
-              label="Hard max iterations"
+              label={t("loop.hardMaxIterations")}
               type="number"
               value={String(settings.hardMaxIterations)}
               onChange={(v) => {
@@ -642,10 +593,10 @@ export default function DocumentationImprovementLoop({
           </div>
 
           <SelectField
-            label="Loop mode"
+            label={t("loop.loopMode")}
             value={settings.mode}
             onChange={(v) => setSetting("mode", v as LoopMode)}
-            options={MODE_OPTIONS.map((m) => ({
+            options={modeOptions.map((m) => ({
               value: m.value,
               label: m.label,
             }))}
@@ -656,32 +607,32 @@ export default function DocumentationImprovementLoop({
 
           <div className="space-y-2 border-t border-slate-100 pt-3">
             <CheckboxRow
-              label="Token-saving mode (section patches, compact prompts)"
+              label={t("loop.tokenSaving")}
               checked={settings.tokenSavingMode}
               onChange={(v) => setSetting("tokenSavingMode", v)}
             />
             <CheckboxRow
-              label="Allow full document rewrite (uses more tokens)"
+              label={t("loop.allowFullRewrite")}
               checked={settings.allowFullRewrite}
               onChange={(v) => setSetting("allowFullRewrite", v)}
             />
             <CheckboxRow
-              label="Stop when missing technical facts are found"
+              label={t("loop.stopMissingFacts")}
               checked={settings.stopWhenMissingFacts}
               onChange={(v) => setSetting("stopWhenMissingFacts", v)}
             />
             <CheckboxRow
-              label="Apply style guide"
+              label={t("loop.applyStyleGuide")}
               checked={settings.applyStyleGuide}
               onChange={(v) => setSetting("applyStyleGuide", v)}
             />
             <CheckboxRow
-              label="Include Technical English review"
+              label={t("loop.includeTechnicalEnglish")}
               checked={settings.includeTechnicalEnglishReview}
               onChange={(v) => setSetting("includeTechnicalEnglishReview", v)}
             />
             <CheckboxRow
-              label="Include security review"
+              label={t("loop.includeSecurity")}
               checked={settings.includeSecurityReview}
               onChange={(v) => setSetting("includeSecurityReview", v)}
             />
@@ -689,7 +640,7 @@ export default function DocumentationImprovementLoop({
 
           <label className="mt-2 block">
             <span className="mb-1 block text-xs font-medium text-slate-600">
-              Style guide
+              {t("loop.styleGuideLabel")}
             </span>
             <textarea
               value={styleGuide}
@@ -701,17 +652,15 @@ export default function DocumentationImprovementLoop({
           </label>
         </SectionCard>
 
-        {/* Loop Control */}
-        <SectionCard title="Loop Control" collapsible={false}>
+        <SectionCard title={t("loop.controlTitle")} collapsible={false}>
           {!project && (
             <p className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-              Analyze API in the API Workspace first so the loop has structured
-              API context.
+              {t("loop.needAnalyze")}
             </p>
           )}
           {!currentDraft.trim() && project && (
             <p className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-              Generate documentation or add a draft before running the loop.
+              {t("loop.needDraft")}
             </p>
           )}
 
@@ -722,28 +671,28 @@ export default function DocumentationImprovementLoop({
               loading={isRunning}
               loadingText={
                 currentIteration > 0
-                  ? `Running iteration ${currentIteration}…`
-                  : PHASE_LABELS[phase] || "Running…"
+                  ? `${t("loop.runningIteration", { count: currentIteration })} ${phaseLabels[phase]}`
+                  : phaseLabels[phase] || t("loop.runningEllipsis")
               }
               disabled={isRunning || !project || !currentDraft.trim()}
             >
-              Run Improvement Loop
+              {t("loop.runLoop")}
             </ActionButton>
             <ActionButton
               variant="danger"
               onClick={stopLoop}
               disabled={!isRunning}
             >
-              Stop Loop
+              {t("loop.stopLoop")}
             </ActionButton>
             <ActionButton
               onClick={() => onApplyToMainDraft(loop.bestDraft)}
               disabled={!loop.bestDraft.trim() || isRunning}
             >
-              Apply Best Draft
+              {t("loop.applyBestDraft")}
             </ActionButton>
             <ActionButton variant="ghost" onClick={resetLoop} disabled={isRunning}>
-              Reset Loop
+              {t("loop.resetLoop")}
             </ActionButton>
           </div>
 
@@ -752,8 +701,8 @@ export default function DocumentationImprovementLoop({
               <LoadingState
                 label={
                   currentIteration > 0
-                    ? `Running iteration ${currentIteration}… ${PHASE_LABELS[phase]}`
-                    : PHASE_LABELS[phase]
+                    ? `${t("loop.runningIteration", { count: currentIteration })} ${phaseLabels[phase]}`
+                    : phaseLabels[phase]
                 }
               />
             </div>
@@ -762,7 +711,7 @@ export default function DocumentationImprovementLoop({
           {latestScores && (
             <div className="mt-4 rounded-lg border border-brand-100 bg-brand-50/40 p-3">
               <p className="text-xs font-medium text-brand-700">
-                Latest overall:{" "}
+                {t("loop.latestOverall")}:{" "}
                 <span className="text-lg font-bold tabular-nums">
                   {latestScores.overall}
                 </span>
@@ -773,20 +722,18 @@ export default function DocumentationImprovementLoop({
         </SectionCard>
       </div>
 
-      {/* Quality Scores */}
       {latestScores && (
-        <SectionCard title="Quality Score" collapsible={false}>
+        <SectionCard title={t("loop.qualityScore")} collapsible={false}>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {SCORE_ROWS.map(({ key, label }) => (
+            {scoreRows.map(({ key, label }) => (
               <ScoreBar key={key} label={label} value={latestScores[key]} />
             ))}
           </div>
         </SectionCard>
       )}
 
-      {/* Iteration Timeline */}
       {loop.iterations.length > 0 && (
-        <SectionCard title="Iteration Timeline" collapsible={false}>
+        <SectionCard title={t("loop.iterationTimeline")} collapsible={false}>
           <ol className="relative space-y-4 border-l-2 border-brand-200 pl-4">
             {loop.iterations.map((it) => (
               <li key={it.iterationNumber} className="relative">
@@ -796,10 +743,10 @@ export default function DocumentationImprovementLoop({
                 <div className="rounded-lg border border-slate-200 bg-white p-3">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <h4 className="text-sm font-semibold text-slate-800">
-                      Iteration {it.iterationNumber}
+                      {t("loop.iterationLabel", { count: it.iterationNumber })}
                     </h4>
                     <span className="rounded-full bg-brand-50 px-2.5 py-0.5 text-xs font-semibold text-brand-700 ring-1 ring-inset ring-brand-200">
-                      Score: {it.scores.overall}
+                      {t("loop.scoreShort")}: {it.scores.overall}
                     </span>
                   </div>
                   {it.patchPlan?.summary && (
@@ -810,7 +757,7 @@ export default function DocumentationImprovementLoop({
                   {it.patches.length > 0 && (
                     <div className="mt-2">
                       <p className="text-[11px] font-medium uppercase tracking-wide text-slate-400">
-                        Section patches
+                        {t("loop.sectionPatches")}
                       </p>
                       <ul className="mt-1 list-disc pl-4 text-xs text-slate-600">
                         {it.patches.map((p, idx) => (
@@ -825,7 +772,7 @@ export default function DocumentationImprovementLoop({
                   {it.issues.length > 0 && (
                     <div className="mt-2">
                       <p className="text-[11px] font-medium uppercase tracking-wide text-slate-400">
-                        Remaining issues
+                        {t("loop.remainingIssues")}
                       </p>
                       <ul className="mt-1 space-y-1">
                         {it.issues.slice(0, 4).map((iss) => (
@@ -841,7 +788,7 @@ export default function DocumentationImprovementLoop({
                   )}
                   {it.stopRecommended && it.stopReason && (
                     <p className="mt-2 text-xs font-medium text-brand-700">
-                      Status: {it.stopReason}
+                      {t("loop.statusPrefix")}: {it.stopReason}
                     </p>
                   )}
                 </div>
@@ -852,12 +799,9 @@ export default function DocumentationImprovementLoop({
       )}
 
       <div className="grid gap-4 lg:grid-cols-2">
-        {/* Best Draft */}
-        <SectionCard title="Best Draft" collapsible={false}>
+        <SectionCard title={t("loop.bestDraft")} collapsible={false}>
           {!loop.bestDraft ? (
-            <p className="text-xs text-slate-400">
-              Run the loop to generate an improved draft.
-            </p>
+            <p className="text-xs text-slate-400">{t("loop.runLoopToGenerate")}</p>
           ) : (
             <>
               <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
@@ -871,7 +815,7 @@ export default function DocumentationImprovementLoop({
                         : "text-slate-500"
                     }`}
                   >
-                    Preview
+                    {t("loop.previewTab")}
                   </button>
                   <button
                     type="button"
@@ -882,19 +826,19 @@ export default function DocumentationImprovementLoop({
                         : "text-slate-500"
                     }`}
                   >
-                    Raw
+                    {t("loop.rawTab")}
                   </button>
                 </div>
                 <div className="flex gap-2">
                   <ActionButton size="sm" variant="secondary" onClick={copyBestDraft}>
-                    {copied ? "복사됨!" : "Copy"}
+                    {copied ? t("loop.copied") : t("loop.copyBestDraft")}
                   </ActionButton>
                   <ActionButton
                     size="sm"
                     variant="primary"
                     onClick={() => onApplyToMainDraft(loop.bestDraft)}
                   >
-                    Apply to main draft
+                    {t("loop.applyToMainDraft")}
                   </ActionButton>
                 </div>
               </div>
@@ -915,13 +859,9 @@ export default function DocumentationImprovementLoop({
           )}
         </SectionCard>
 
-        {/* Blocking Questions */}
-        <SectionCard title="Blocking Questions" collapsible={false}>
+        <SectionCard title={t("loop.blockingQuestions")} collapsible={false}>
           {loop.blockingQuestions.length === 0 ? (
-            <p className="text-xs text-slate-400">
-              No blocking engineer questions yet. Questions appear when the loop
-              cannot safely improve without missing technical facts.
-            </p>
+            <p className="text-xs text-slate-400">{t("loop.noBlockingQuestions")}</p>
           ) : (
             <ul className="space-y-2">
               {loop.blockingQuestions.map((q) => (

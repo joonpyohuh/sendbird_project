@@ -1,40 +1,42 @@
-import { BookMarked, ShieldAlert, Code2, ListTree } from "lucide-react"
-import { TextAreaField } from "./primitives"
+"use client";
 
-const checklist = [
-  {
-    icon: BookMarked,
-    title: "Terminology consistency",
-    desc: "Enforce approved terms across every doc.",
-  },
-  {
-    icon: ShieldAlert,
-    title: "Security warnings",
-    desc: "Flag missing token and server-side notes.",
-  },
-  {
-    icon: Code2,
-    title: "Developer-facing English",
-    desc: "Clear, concise, and unambiguous wording.",
-  },
-  {
-    icon: ListTree,
-    title: "Markdown structure",
-    desc: "Consistent headings, tables, and code blocks.",
-  },
-]
+import { BookMarked, ShieldAlert, Code2, ListTree } from "lucide-react";
+import { useAppPreferences } from "@/components/shell/AppPreferencesProvider";
+import { TextAreaField } from "./primitives";
 
 export function StyleGuidePanel() {
+  const { t } = useAppPreferences();
+
+  const checklist = [
+    {
+      icon: BookMarked,
+      title: t("styleGuide.item1Title"),
+      desc: t("styleGuide.item1Desc"),
+    },
+    {
+      icon: ShieldAlert,
+      title: t("styleGuide.item2Title"),
+      desc: t("styleGuide.item2Desc"),
+    },
+    {
+      icon: Code2,
+      title: t("styleGuide.item3Title"),
+      desc: t("styleGuide.item3Desc"),
+    },
+    {
+      icon: ListTree,
+      title: t("styleGuide.item4Title"),
+      desc: t("styleGuide.item4Desc"),
+    },
+  ];
+
   return (
     <div className="space-y-4">
       <TextAreaField
-        label="Documentation style guide"
+        label={t("styleGuide.label")}
         rows={6}
-        defaultValue={`Use "API token", not "API key".
-Use "request body", not "payload".
-Avoid "just" and "simply".
-Use backticks for field names.`}
-        placeholder={`Use "API token", not "API key". Use "request body", not "payload". Avoid "just" and "simply". Use backticks for field names.`}
+        defaultValue={t("styleGuide.defaultValue")}
+        placeholder={t("styleGuide.placeholder")}
       />
       <div className="grid gap-3 sm:grid-cols-2">
         {checklist.map(({ icon: Icon, title, desc }) => (
@@ -53,5 +55,5 @@ Use backticks for field names.`}
         ))}
       </div>
     </div>
-  )
+  );
 }
