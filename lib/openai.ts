@@ -13,6 +13,13 @@ export function getModel(): string {
 
 let cachedClient: OpenAI | null = null;
 
+function apiKeySetupHint(): string {
+  if (process.env.VERCEL) {
+    return "Vercel Dashboard → Project → Settings → Environment Variables에 OPENAI_API_KEY를 추가한 뒤 Redeploy 하세요.";
+  }
+  return ".env.local 파일에 키를 추가하고 개발 서버를 재시작하세요 (.env.example 참고).";
+}
+
 /**
  * Lazily create a singleton OpenAI client.
  * Throws a clear error (without leaking the key) if the key is missing.
@@ -21,7 +28,7 @@ export function getOpenAIClient(): OpenAI {
   const apiKey = process.env.OPENAI_API_KEY?.trim();
   if (!apiKey) {
     throw new Error(
-      "OPENAI_API_KEY가 설정되지 않았습니다. .env.local 파일에 키를 추가하세요 (예: .env.example 참고)."
+      `OPENAI_API_KEY가 설정되지 않았습니다. ${apiKeySetupHint()}`
     );
   }
   if (
@@ -30,7 +37,7 @@ export function getOpenAIClient(): OpenAI {
     apiKey.endsWith("-here")
   ) {
     throw new Error(
-      "OPENAI_API_KEY가 예시 값(sk-your-key-here)입니다. .env.local에 실제 OpenAI API 키를 넣고 개발 서버를 재시작하세요."
+      `OPENAI_API_KEY가 예시 값입니다. ${apiKeySetupHint()}`
     );
   }
   if (!cachedClient) {

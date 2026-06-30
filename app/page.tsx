@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import AppHeader from "@/components/AppHeader";
 import SectionCard from "@/components/SectionCard";
 import TextAreaField from "@/components/TextAreaField";
 import InputField from "@/components/InputField";
@@ -16,6 +15,10 @@ import LoadingState from "@/components/LoadingState";
 import TechnicalEnglishCoach from "@/components/TechnicalEnglishCoach";
 import GlobalDocsMode from "@/components/GlobalDocsMode";
 import DocumentationImprovementLoop from "@/components/DocumentationImprovementLoop";
+import PremiumShell from "@/components/shell/PremiumShell";
+import BentoGuide from "@/components/shell/BentoGuide";
+import { useAppPreferences } from "@/components/shell/AppPreferencesProvider";
+import type { ActiveTab } from "@/components/shell/types";
 import { callAi } from "@/lib/client";
 import {
   normalizeEngineerQuestions,
@@ -41,26 +44,11 @@ import type {
   TechnicalEnglishResult,
 } from "@/lib/types";
 
-type AppMode = "workspace" | "global" | "loop";
-
 const FORM_KEY = "adw_form_v1";
 const PROJECT_KEY = "adw_project_v1";
 
-const LOADING_LABELS: Record<AiAction, string> = {
-  analyze: "API 분석 중…",
-  missing_info: "누락 정보 탐색 중…",
-  engineer_questions: "엔지니어 질문 생성 중…",
-  generate_doc: "문서 생성 중…",
-  review_doc: "문서 리뷰 중…",
-  technical_english_coach: "Technical English 변환 중…",
-  global_docs_convert: "영문 문서 변환 중…",
-  language_quality_review: "언어 품질 리뷰 중…",
-  run_improvement_loop_iteration: "문서 개선 반복 실행 중…",
-  run_improvement_loop_review: "문서 리뷰 중…",
-  run_improvement_loop_patch: "섹션 패치 생성 중…",
-};
-
 export default function Page() {
+  const { t } = useAppPreferences();
   const [form, setForm] = useState<RawFormInput>(EMPTY_FORM);
   const [project, setProject] = useState<ApiDocProject | null>(null);
   const [busy, setBusy] = useState<AiAction | null>(null);
@@ -69,7 +57,7 @@ export default function Page() {
   const [coachResult, setCoachResult] = useState<TechnicalEnglishResult | null>(
     null
   );
-  const [appMode, setAppMode] = useState<AppMode>("workspace");
+  const [activeTab, setActiveTab] = useState<ActiveTab>(null);
   const [globalResult, setGlobalResult] = useState<GlobalDocsResult | null>(
     null
   );
@@ -150,7 +138,7 @@ export default function Page() {
 
   async function handleAnalyze() {
     if (formIsEmpty) {
-      setError("먼저 API 정보를 입력하거나 'Load Sample API'를 눌러주세요.");
+      setError(t("errors.emptyForm"));
       return;
     }
     setBusy("analyze");
@@ -166,8 +154,8 @@ export default function Page() {
       // Fallback: build a basic project locally so the writer is not blocked.
       setProject(projectFromForm(form));
       setError(
-        (e instanceof Error ? e.message : "분석에 실패했습니다.") +
-          " 기본 요약으로 대체했습니다."
+        (e instanceof Error ? e.message : t("errors.analyzeFallback")) +
+          t("errors.analyzeFallbackSuffix")
       );
     } finally {
       setBusy(null);
@@ -176,7 +164,7 @@ export default function Page() {
 
   async function handleMissingInfo() {
     if (!project) {
-      setError("먼저 'Analyze API'를 실행해주세요.");
+      setError(t("errors.needAnalyze"));
       return;
     }
     setBusy("missing_info");
@@ -186,7 +174,7 @@ export default function Page() {
       const items = normalizeMissingInfo(res.data?.missingInfo);
       setProject((prev) => (prev ? { ...prev, missingInfo: items } : prev));
     } catch (e) {
-      setError(e instanceof Error ? e.message : "누락 정보 탐색에 실패했습니다.");
+      setError(e instanceof Error ? e.message : t("errors.missingInfoFail"));
     } finally {
       setBusy(null);
     }
@@ -194,7 +182,7 @@ export default function Page() {
 
   async function handleEngineerQuestions() {
     if (!project) {
-      setError("먼저 'Analyze API'를 실행해주세요.");
+      setError(t("errors.needAnalyze"));
       return;
     }
     setBusy("engineer_questions");
@@ -206,7 +194,7 @@ export default function Page() {
         prev ? { ...prev, engineerQuestions: questions } : prev
       );
     } catch (e) {
-      setError(e instanceof Error ? e.message : "질문 생성에 실패했습니다.");
+      setError(e instanceof Error ? e.message : t("errors.questionsFail"));
     } finally {
       setBusy(null);
     }
@@ -214,7 +202,7 @@ export default function Page() {
 
   async function handleGenerateDoc() {
     if (!project) {
-      setError("먼저 'Analyze API'를 실행해주세요.");
+      setError(t("errors.needAnalyze"));
       return;
     }
     setBusy("generate_doc");
@@ -225,7 +213,7 @@ export default function Page() {
       setProject((prev) => (prev ? { ...prev, docDraftMarkdown: md } : prev));
       setHasReviewed(false);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "문서 생성에 실패했습니다.");
+      setError(e instanceof Error ? e.message : t("errors.generateFail"));
     } finally {
       setBusy(null);
     }
@@ -233,7 +221,7 @@ export default function Page() {
 
   async function handleReviewDoc() {
     if (!project || !project.docDraftMarkdown.trim()) {
-      setError("먼저 'Generate Documentation'으로 문서를 생성해주세요.");
+      setError(t("errors.needGenerate"));
       return;
     }
     setBusy("review_doc");
@@ -247,7 +235,7 @@ export default function Page() {
       setProject((prev) => (prev ? { ...prev, reviewIssues: issues } : prev));
       setHasReviewed(true);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "문서 리뷰에 실패했습니다.");
+      setError(e instanceof Error ? e.message : t("errors.reviewFail"));
     } finally {
       setBusy(null);
     }
@@ -255,7 +243,7 @@ export default function Page() {
 
   async function handleTechnicalEnglish(payload: TechnicalEnglishPayload) {
     if (!payload.koreanText.trim()) {
-      setError("변환할 한국어 텍스트를 입력해주세요.");
+      setError(t("errors.coachEmpty"));
       return;
     }
     setBusy("technical_english_coach");
@@ -273,7 +261,7 @@ export default function Page() {
       );
     } catch (e) {
       setError(
-        e instanceof Error ? e.message : "Technical English 변환에 실패했습니다."
+        e instanceof Error ? e.message : t("errors.coachFail")
       );
     } finally {
       setBusy(null);
@@ -302,7 +290,7 @@ export default function Page() {
 
   async function handleGlobalConvert(payload: GlobalDocsConvertPayload) {
     if (!payload.sourceText.trim()) {
-      setError("변환할 소스 텍스트를 입력해주세요.");
+      setError(t("errors.globalEmpty"));
       return;
     }
     setBusy("global_docs_convert");
@@ -320,7 +308,7 @@ export default function Page() {
       setGlobalResult(result);
     } catch (e) {
       setError(
-        e instanceof Error ? e.message : "영문 문서 변환에 실패했습니다."
+        e instanceof Error ? e.message : t("errors.globalFail")
       );
     } finally {
       setBusy(null);
@@ -329,7 +317,7 @@ export default function Page() {
 
   async function handleGlobalReview(payload: LanguageQualityReviewPayload) {
     if (!payload.englishText.trim()) {
-      setError("리뷰할 영문 텍스트가 없습니다. 먼저 변환을 실행해주세요.");
+      setError(t("errors.globalReviewEmpty"));
       return;
     }
     setBusy("language_quality_review");
@@ -343,7 +331,7 @@ export default function Page() {
         prev ? { ...prev, languageQualityIssues: issues } : prev
       );
     } catch (e) {
-      setError(e instanceof Error ? e.message : "언어 품질 리뷰에 실패했습니다.");
+      setError(e instanceof Error ? e.message : t("errors.globalReviewFail"));
     } finally {
       setBusy(null);
     }
@@ -389,166 +377,113 @@ export default function Page() {
 
   const isBusy = busy !== null;
 
+  const loadingLabel = (action: AiAction) => t(`loading.${action}`);
+
+  const apiBento = [
+    { label: t("bento.api.step1Label"), value: t("bento.api.step1Value") },
+    { label: t("bento.api.step2Label"), value: t("bento.api.step2Value") },
+    { label: t("bento.api.step3Label"), value: t("bento.api.step3Value") },
+  ];
+
+  const docsBento = [
+    { label: t("bento.docs.workflowLabel"), value: t("bento.docs.workflowValue") },
+    { label: t("bento.docs.convertLabel"), value: t("bento.docs.convertValue") },
+    { label: t("bento.docs.qualityLabel"), value: t("bento.docs.qualityValue") },
+  ];
+
+  const loopBento = [
+    { label: t("bento.loop.reviewLabel"), value: t("bento.loop.reviewValue") },
+    { label: t("bento.loop.patchLabel"), value: t("bento.loop.patchValue") },
+    { label: t("bento.loop.targetLabel"), value: t("bento.loop.targetValue") },
+  ];
+
+  const readerOptions = [
+    { value: "beginner", label: t("api.readerBeginner") },
+    { value: "frontend", label: t("api.readerFrontend") },
+    { value: "backend", label: t("api.readerBackend") },
+    { value: "technical_writer", label: t("api.readerTw") },
+  ];
+
+  const authOptions = [
+    { value: "api_token", label: t("api.authApiToken") },
+    { value: "bearer_token", label: t("api.authBearer") },
+    { value: "none", label: t("api.authNone") },
+    { value: "unknown", label: t("api.authUnknown") },
+  ];
+
   return (
-    <div className="min-h-screen bg-slate-50">
-      <AppHeader />
+    <PremiumShell
+      activeTab={activeTab}
+      onTabChange={setActiveTab}
+      error={error}
+      onDismissError={() => setError(null)}
+    >
+      {activeTab === "api" && (
+        <>
+          <BentoGuide items={apiBento} />
 
-      {/* Top-level mode navigation */}
-      <div className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-[1600px] items-center gap-1 px-4 sm:px-6">
-          <button
-            type="button"
-            onClick={() => setAppMode("workspace")}
-            className={`-mb-px border-b-2 px-3 py-3 text-sm font-medium transition ${
-              appMode === "workspace"
-                ? "border-brand-600 text-brand-700"
-                : "border-transparent text-slate-500 hover:text-slate-700"
-            }`}
-          >
-            API Workspace
-          </button>
-          <button
-            type="button"
-            onClick={() => setAppMode("global")}
-            className={`-mb-px flex items-center gap-1.5 border-b-2 px-3 py-3 text-sm font-medium transition ${
-              appMode === "global"
-                ? "border-brand-600 text-brand-700"
-                : "border-transparent text-slate-500 hover:text-slate-700"
-            }`}
-          >
-            Global Docs Mode
-            <span className="rounded-full bg-brand-50 px-1.5 py-0.5 text-[10px] font-semibold text-brand-600 ring-1 ring-inset ring-brand-200">
-              KO → EN
-            </span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setAppMode("loop")}
-            className={`-mb-px flex items-center gap-1.5 border-b-2 px-3 py-3 text-sm font-medium transition ${
-              appMode === "loop"
-                ? "border-brand-600 text-brand-700"
-                : "border-transparent text-slate-500 hover:text-slate-700"
-            }`}
-          >
-            Improvement Loop
-            <span className="rounded-full bg-brand-50 px-1.5 py-0.5 text-[10px] font-semibold text-brand-600 ring-1 ring-inset ring-brand-200">
-              Loop
-            </span>
-          </button>
-        </div>
-      </div>
-
-      {/* Action toolbar (API Workspace only) */}
-      {appMode === "workspace" && (
-      <div className="sticky top-0 z-10 border-b border-slate-200 bg-white/80 backdrop-blur">
-        <div className="mx-auto flex max-w-[1600px] flex-wrap items-center gap-2 px-4 py-3 sm:px-6">
-          <ActionButton variant="secondary" onClick={loadSample} disabled={isBusy}>
-            Load Sample API
-          </ActionButton>
-          <ActionButton
-            variant="primary"
-            onClick={handleAnalyze}
-            loading={busy === "analyze"}
-            loadingText={LOADING_LABELS.analyze}
-            disabled={isBusy}
-          >
-            Analyze API
-          </ActionButton>
-          <ActionButton
-            onClick={handleMissingInfo}
-            loading={busy === "missing_info"}
-            loadingText={LOADING_LABELS.missing_info}
-            disabled={isBusy || !project}
-          >
-            Find Missing Info
-          </ActionButton>
-          <ActionButton
-            onClick={handleEngineerQuestions}
-            loading={busy === "engineer_questions"}
-            loadingText={LOADING_LABELS.engineer_questions}
-            disabled={isBusy || !project}
-          >
-            Generate Engineer Questions
-          </ActionButton>
-          <ActionButton
-            onClick={handleGenerateDoc}
-            loading={busy === "generate_doc"}
-            loadingText={LOADING_LABELS.generate_doc}
-            disabled={isBusy || !project}
-          >
-            Generate Documentation
-          </ActionButton>
-          <ActionButton
-            onClick={handleReviewDoc}
-            loading={busy === "review_doc"}
-            loadingText={LOADING_LABELS.review_doc}
-            disabled={isBusy || !project?.docDraftMarkdown}
-          >
-            Review Documentation
-          </ActionButton>
-          <div className="ml-auto">
-            <ActionButton variant="danger" onClick={reset} disabled={isBusy}>
-              Reset
+          <div className="mb-6 flex flex-wrap items-center gap-2 rounded-2xl border border-slate-200 bg-white p-3 dark:border-slate-800/70 dark:bg-slate-900/20">
+            <ActionButton variant="secondary" onClick={loadSample} disabled={isBusy}>
+              {t("api.loadSample")}
             </ActionButton>
-          </div>
-        </div>
-      </div>
-      )}
-
-      {error && (
-        <div className="mx-auto max-w-[1600px] px-4 pt-3 sm:px-6">
-          <div className="flex items-start gap-2 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-            <span className="font-medium">오류:</span>
-            <span className="flex-1">{error}</span>
-            <button
-              type="button"
-              onClick={() => setError(null)}
-              className="text-rose-400 hover:text-rose-600"
-              aria-label="닫기"
+            <ActionButton
+              variant="primary"
+              onClick={handleAnalyze}
+              loading={busy === "analyze"}
+              loadingText={loadingLabel("analyze")}
+              disabled={isBusy}
             >
-              ✕
-            </button>
+              {t("api.analyze")}
+            </ActionButton>
+            <ActionButton
+              onClick={handleMissingInfo}
+              loading={busy === "missing_info"}
+              loadingText={loadingLabel("missing_info")}
+              disabled={isBusy || !project}
+            >
+              {t("api.missingInfo")}
+            </ActionButton>
+            <ActionButton
+              onClick={handleEngineerQuestions}
+              loading={busy === "engineer_questions"}
+              loadingText={loadingLabel("engineer_questions")}
+              disabled={isBusy || !project}
+            >
+              {t("api.engineerQuestions")}
+            </ActionButton>
+            <ActionButton
+              onClick={handleGenerateDoc}
+              loading={busy === "generate_doc"}
+              loadingText={loadingLabel("generate_doc")}
+              disabled={isBusy || !project}
+            >
+              {t("api.generateDoc")}
+            </ActionButton>
+            <ActionButton
+              onClick={handleReviewDoc}
+              loading={busy === "review_doc"}
+              loadingText={loadingLabel("review_doc")}
+              disabled={isBusy || !project?.docDraftMarkdown}
+            >
+              {t("api.reviewDoc")}
+            </ActionButton>
+            <div className="ml-auto">
+              <ActionButton variant="danger" onClick={reset} disabled={isBusy}>
+                {t("api.reset")}
+              </ActionButton>
+            </div>
           </div>
-        </div>
-      )}
 
-      {appMode === "global" && (
-        <main className="mx-auto max-w-[1600px] px-4 py-4 sm:px-6">
-          <GlobalDocsMode
-            result={globalResult}
-            converting={busy === "global_docs_convert"}
-            reviewing={busy === "language_quality_review"}
-            canApply
-            onConvert={handleGlobalConvert}
-            onReview={handleGlobalReview}
-            onApply={applyEnglishToDraft}
-          />
-        </main>
-      )}
-
-      {appMode === "loop" && (
-        <main className="mx-auto max-w-[1600px] px-4 py-4 sm:px-6">
-          <DocumentationImprovementLoop
-            project={project}
-            currentDraft={project?.docDraftMarkdown ?? ""}
-            targetReader={form.targetReader}
-            onApplyToMainDraft={(text) => applyDraftToMain(text, "replace")}
-          />
-        </main>
-      )}
-
-      {/* 3-column layout */}
-      {appMode === "workspace" && (
-      <main className="mx-auto grid max-w-[1600px] grid-cols-1 gap-4 px-4 py-4 sm:px-6 lg:grid-cols-12">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
         {/* LEFT: input */}
         <div className="space-y-3 lg:col-span-4">
-          <h2 className="px-1 text-xs font-semibold uppercase tracking-wide text-slate-400">
-            1 · API Input
+          <h2 className="px-1 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+            {t("api.colInput")}
           </h2>
 
           <SectionCard
-            title="Technical English Coach"
-            description="한국어 API 설명을 개발자용 영어로 변환하고 표현을 코치합니다"
+            title={t("api.coachTitle")}
+            description={t("api.coachDesc")}
             defaultOpen={false}
           >
             <TechnicalEnglishCoach
@@ -560,49 +495,44 @@ export default function Page() {
             />
           </SectionCard>
 
-          <SectionCard title="Raw API Notes" description="엔지니어에게 받은 원본 정보를 붙여넣으세요">
+          <SectionCard title={t("api.rawNotesTitle")} description={t("api.rawNotesDesc")}>
             <TextAreaField
-              label="Raw notes"
+              label={t("api.rawNotesLabel")}
               value={form.rawNotes}
               onChange={(v) => setField("rawNotes", v)}
               rows={8}
               mono
-              placeholder="엔지니어가 공유한 API 설명, 예시, 메모 등을 그대로 붙여넣으세요…"
+              placeholder={t("api.rawNotesPlaceholder")}
             />
           </SectionCard>
 
-          <SectionCard title="Basic Info">
+          <SectionCard title={t("api.basicInfo")}>
             <InputField
-              label="Feature name"
+              label={t("api.featureName")}
               value={form.featureName}
               onChange={(v) => setField("featureName", v)}
               placeholder="Create a user"
             />
             <InputField
-              label="Endpoint title"
+              label={t("api.endpointTitle")}
               value={form.endpointTitle}
               onChange={(v) => setField("endpointTitle", v)}
               placeholder="Create a user"
             />
             <InputField
-              label="Product area"
+              label={t("api.productArea")}
               value={form.productArea}
               onChange={(v) => setField("productArea", v)}
               placeholder="Chat Platform API"
             />
             <SelectField
-              label="Target reader"
+              label={t("api.targetReader")}
               value={form.targetReader}
               onChange={(v) => setField("targetReader", v as RawFormInput["targetReader"])}
-              options={[
-                { value: "beginner", label: "Beginner developer" },
-                { value: "frontend", label: "Frontend developer" },
-                { value: "backend", label: "Backend developer" },
-                { value: "technical_writer", label: "Technical writer" },
-              ]}
+              options={readerOptions}
             />
             <TextAreaField
-              label="Use case"
+              label={t("api.useCase")}
               value={form.useCase}
               onChange={(v) => setField("useCase", v)}
               rows={2}
@@ -610,9 +540,9 @@ export default function Page() {
             />
           </SectionCard>
 
-          <SectionCard title="Endpoint">
+          <SectionCard title={t("api.endpoint")}>
             <SelectField
-              label="HTTP method"
+              label={t("api.httpMethod")}
               value={form.method}
               onChange={(v) => setField("method", v as RawFormInput["method"])}
               options={[
@@ -624,13 +554,13 @@ export default function Page() {
               ]}
             />
             <InputField
-              label="Endpoint URL"
+              label={t("api.endpointUrl")}
               value={form.endpointUrl}
               onChange={(v) => setField("endpointUrl", v)}
               placeholder="/v3/users"
             />
             <TextAreaField
-              label="Description"
+              label={t("api.description")}
               value={form.description}
               onChange={(v) => setField("description", v)}
               rows={2}
@@ -638,20 +568,15 @@ export default function Page() {
             />
           </SectionCard>
 
-          <SectionCard title="Authentication & Headers" defaultOpen={false}>
+          <SectionCard title={t("api.authHeaders")} defaultOpen={false}>
             <SelectField
-              label="Authentication type"
+              label={t("api.authType")}
               value={form.authType}
               onChange={(v) => setField("authType", v as RawFormInput["authType"])}
-              options={[
-                { value: "api_token", label: "API token" },
-                { value: "bearer_token", label: "Bearer token" },
-                { value: "none", label: "None" },
-                { value: "unknown", label: "Unknown" },
-              ]}
+              options={authOptions}
             />
             <TextAreaField
-              label="Required headers"
+              label={t("api.requiredHeaders")}
               value={form.requiredHeaders}
               onChange={(v) => setField("requiredHeaders", v)}
               rows={3}
@@ -659,14 +584,14 @@ export default function Page() {
               placeholder={"Content-Type: application/json\nApi-Token: {your_api_token}"}
             />
             <TextAreaField
-              label="Optional headers"
+              label={t("api.optionalHeaders")}
               value={form.optionalHeaders}
               onChange={(v) => setField("optionalHeaders", v)}
               rows={2}
               mono
             />
             <TextAreaField
-              label="Security note"
+              label={t("api.securityNote")}
               value={form.securityNote}
               onChange={(v) => setField("securityNote", v)}
               rows={2}
@@ -674,30 +599,30 @@ export default function Page() {
             />
           </SectionCard>
 
-          <SectionCard title="Request" defaultOpen={false}>
+          <SectionCard title={t("api.request")} defaultOpen={false}>
             <TextAreaField
-              label="Path parameters"
+              label={t("api.pathParams")}
               value={form.pathParams}
               onChange={(v) => setField("pathParams", v)}
               rows={2}
               mono
             />
             <TextAreaField
-              label="Query parameters"
+              label={t("api.queryParams")}
               value={form.queryParams}
               onChange={(v) => setField("queryParams", v)}
               rows={2}
               mono
             />
             <TextAreaField
-              label="Request body"
+              label={t("api.requestBody")}
               value={form.requestBody}
               onChange={(v) => setField("requestBody", v)}
               rows={4}
               mono
             />
             <TextAreaField
-              label="Example request"
+              label={t("api.exampleRequest")}
               value={form.exampleRequest}
               onChange={(v) => setField("exampleRequest", v)}
               rows={4}
@@ -705,22 +630,22 @@ export default function Page() {
             />
           </SectionCard>
 
-          <SectionCard title="Response" defaultOpen={false}>
+          <SectionCard title={t("api.response")} defaultOpen={false}>
             <InputField
-              label="Success status code"
+              label={t("api.successStatus")}
               value={form.successStatus}
               onChange={(v) => setField("successStatus", v)}
               placeholder="200"
             />
             <TextAreaField
-              label="Response body"
+              label={t("api.responseBody")}
               value={form.responseBody}
               onChange={(v) => setField("responseBody", v)}
               rows={4}
               mono
             />
             <TextAreaField
-              label="Example response"
+              label={t("api.exampleResponse")}
               value={form.exampleResponse}
               onChange={(v) => setField("exampleResponse", v)}
               rows={4}
@@ -728,9 +653,9 @@ export default function Page() {
             />
           </SectionCard>
 
-          <SectionCard title="Errors" defaultOpen={false}>
+          <SectionCard title={t("api.errors")} defaultOpen={false}>
             <TextAreaField
-              label="Error cases"
+              label={t("api.errorCases")}
               value={form.errorCases}
               onChange={(v) => setField("errorCases", v)}
               rows={4}
@@ -739,29 +664,29 @@ export default function Page() {
             />
           </SectionCard>
 
-          <SectionCard title="Operational Notes" defaultOpen={false}>
+          <SectionCard title={t("api.operationalNotes")} defaultOpen={false}>
             <InputField
-              label="Rate limit"
+              label={t("api.rateLimit")}
               value={form.rateLimit}
               onChange={(v) => setField("rateLimit", v)}
             />
             <InputField
-              label="Pagination"
+              label={t("api.pagination")}
               value={form.pagination}
               onChange={(v) => setField("pagination", v)}
             />
             <InputField
-              label="Webhook event"
+              label={t("api.webhook")}
               value={form.webhook}
               onChange={(v) => setField("webhook", v)}
             />
             <InputField
-              label="Retry behavior"
+              label={t("api.retryBehavior")}
               value={form.retryBehavior}
               onChange={(v) => setField("retryBehavior", v)}
             />
             <InputField
-              label="Idempotency"
+              label={t("api.idempotency")}
               value={form.idempotency}
               onChange={(v) => setField("idempotency", v)}
             />
@@ -770,27 +695,27 @@ export default function Page() {
 
         {/* MIDDLE: structured summary */}
         <div className="space-y-3 lg:col-span-4">
-          <h2 className="px-1 text-xs font-semibold uppercase tracking-wide text-slate-400">
-            2 · Structured API Summary
+          <h2 className="px-1 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+            {t("api.colSummary")}
           </h2>
 
-          {busy === "analyze" && <LoadingState label={LOADING_LABELS.analyze} />}
+          {busy === "analyze" && <LoadingState label={loadingLabel("analyze")} />}
 
-          <SectionCard title="Structured API Summary" collapsible={false}>
+          <SectionCard title={t("api.structuredSummary")} collapsible={false}>
             <StructuredSummary project={project} />
           </SectionCard>
 
-          <SectionCard title="Missing Information">
+          <SectionCard title={t("api.missingInformation")}>
             {busy === "missing_info" ? (
-              <LoadingState label={LOADING_LABELS.missing_info} />
+              <LoadingState label={loadingLabel("missing_info")} />
             ) : (
               <MissingInfoList items={project?.missingInfo ?? []} />
             )}
           </SectionCard>
 
-          <SectionCard title="Engineer Questions">
+          <SectionCard title={t("api.engineerQuestions")}>
             {busy === "engineer_questions" ? (
-              <LoadingState label={LOADING_LABELS.engineer_questions} />
+              <LoadingState label={loadingLabel("engineer_questions")} />
             ) : (
               <EngineerQuestionsPanel
                 questions={project?.engineerQuestions ?? []}
@@ -803,24 +728,24 @@ export default function Page() {
 
         {/* RIGHT: documentation output */}
         <div className="space-y-3 lg:col-span-4">
-          <h2 className="px-1 text-xs font-semibold uppercase tracking-wide text-slate-400">
-            3 · Documentation Output
+          <h2 className="px-1 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+            {t("api.colOutput")}
           </h2>
 
-          <SectionCard title="Documentation Draft" collapsible={false}>
+          <SectionCard title={t("api.documentationDraft")} collapsible={false}>
             <div className="mb-3 flex flex-wrap gap-2">
               <ActionButton
                 variant="primary"
                 size="sm"
-                onClick={() => setAppMode("loop")}
+                onClick={() => setActiveTab("loop")}
                 disabled={!project?.docDraftMarkdown?.trim()}
-                title="Improvement Loop 탭에서 문서 품질을 반복 개선합니다"
+                title={t("api.runLoopTitle")}
               >
-                Run Improvement Loop
+                {t("api.runLoop")}
               </ActionButton>
             </div>
             {busy === "generate_doc" ? (
-              <LoadingState label={LOADING_LABELS.generate_doc} />
+              <LoadingState label={loadingLabel("generate_doc")} />
             ) : (
               <MarkdownOutput
                 markdown={project?.docDraftMarkdown ?? ""}
@@ -835,9 +760,9 @@ export default function Page() {
             )}
           </SectionCard>
 
-          <SectionCard title="AI Review">
+          <SectionCard title={t("api.aiReview")}>
             {busy === "review_doc" ? (
-              <LoadingState label={LOADING_LABELS.review_doc} />
+              <LoadingState label={loadingLabel("review_doc")} />
             ) : (
               <ReviewIssuesPanel
                 issues={project?.reviewIssues ?? []}
@@ -846,13 +771,36 @@ export default function Page() {
             )}
           </SectionCard>
         </div>
-      </main>
+          </div>
+        </>
       )}
 
-      <footer className="mx-auto max-w-[1600px] px-4 pb-8 pt-2 text-center text-xs text-slate-400 sm:px-6">
-        API Doc Workspace · Technical Writer를 대체하지 않고, 더 빠르게 일하도록
-        돕습니다.
-      </footer>
-    </div>
+      {activeTab === "docs" && (
+        <>
+          <BentoGuide items={docsBento} />
+          <GlobalDocsMode
+            result={globalResult}
+            converting={busy === "global_docs_convert"}
+            reviewing={busy === "language_quality_review"}
+            canApply
+            onConvert={handleGlobalConvert}
+            onReview={handleGlobalReview}
+            onApply={applyEnglishToDraft}
+          />
+        </>
+      )}
+
+      {activeTab === "loop" && (
+        <>
+          <BentoGuide items={loopBento} />
+          <DocumentationImprovementLoop
+            project={project}
+            currentDraft={project?.docDraftMarkdown ?? ""}
+            targetReader={form.targetReader}
+            onApplyToMainDraft={(text) => applyDraftToMain(text, "replace")}
+          />
+        </>
+      )}
+    </PremiumShell>
   );
 }

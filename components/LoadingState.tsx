@@ -1,6 +1,6 @@
 export default function LoadingState({ label }: { label: string }) {
   return (
-    <div className="flex items-center gap-3 rounded-lg border border-brand-100 bg-brand-50/60 px-4 py-3 text-sm text-brand-700">
+    <div className="flex items-center gap-3 rounded-xl border border-blue-100 bg-blue-50/80 px-4 py-3 text-sm text-blue-700 dark:border-blue-500/20 dark:bg-blue-500/[0.08] dark:text-blue-200">
       <svg
         className="h-4 w-4 animate-spin"
         xmlns="http://www.w3.org/2000/svg"

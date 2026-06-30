@@ -14,13 +14,13 @@ type ActionButtonProps = {
 
 const VARIANT_STYLES: Record<Variant, string> = {
   primary:
-    "bg-brand-600 text-white hover:bg-brand-700 focus:ring-brand-200 disabled:bg-brand-300",
+    "bg-blue-600 text-white hover:bg-blue-500 focus:ring-blue-500/30 disabled:bg-blue-300 disabled:text-blue-100 dark:disabled:bg-blue-900/50 dark:disabled:text-blue-200/50",
   secondary:
-    "bg-white text-slate-700 ring-1 ring-inset ring-slate-300 hover:bg-slate-50 focus:ring-brand-200 disabled:text-slate-400",
+    "bg-white text-slate-700 ring-1 ring-inset ring-slate-300 hover:bg-slate-50 focus:ring-blue-500/20 disabled:text-slate-400 dark:bg-slate-900/60 dark:text-slate-200 dark:ring-slate-700 dark:hover:bg-slate-800/80 dark:disabled:text-slate-600",
   ghost:
-    "bg-transparent text-slate-600 hover:bg-slate-100 focus:ring-slate-200 disabled:text-slate-300",
+    "bg-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-900 focus:ring-slate-200 disabled:text-slate-300 dark:text-slate-400 dark:hover:bg-slate-800/50 dark:hover:text-slate-200 dark:focus:ring-slate-700 dark:disabled:text-slate-600",
   danger:
-    "bg-white text-rose-600 ring-1 ring-inset ring-rose-200 hover:bg-rose-50 focus:ring-rose-200 disabled:text-rose-300",
+    "bg-rose-50 text-rose-700 ring-1 ring-inset ring-rose-200 hover:bg-rose-100 focus:ring-rose-200 disabled:text-rose-300 dark:bg-rose-500/[0.08] dark:text-rose-300 dark:ring-rose-500/20 dark:hover:bg-rose-500/[0.12] dark:focus:ring-rose-500/20 dark:disabled:text-rose-900",
 };
 
 export default function ActionButton({

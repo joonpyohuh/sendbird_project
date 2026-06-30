@@ -22,7 +22,7 @@ export default function SectionCard({
   const [open, setOpen] = useState(defaultOpen);
 
   return (
-    <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+    <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm backdrop-blur-sm dark:border-slate-800/70 dark:bg-slate-900/25">
       <div className="flex items-center justify-between gap-2 px-4 py-3">
         <button
           type="button"
@@ -50,7 +50,7 @@ export default function SectionCard({
             </svg>
           )}
           <div>
-            <h3 className="text-sm font-semibold text-slate-900">{title}</h3>
+            <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">{title}</h3>
             {description && (
               <p className="mt-0.5 text-xs text-slate-500">{description}</p>
             )}
@@ -59,7 +59,7 @@ export default function SectionCard({
         {right}
       </div>
       {open && (
-        <div className="space-y-3 border-t border-slate-100 px-4 py-4">
+        <div className="space-y-3 border-t border-slate-100 px-4 py-4 dark:border-slate-800/60">
           {children}
         </div>
       )}

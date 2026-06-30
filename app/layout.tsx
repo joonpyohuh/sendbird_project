@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { AppPreferencesProvider } from "@/components/shell/AppPreferencesProvider";
+import ThemeScript from "@/components/shell/ThemeScript";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -12,8 +14,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="ko">
-      <body>{children}</body>
+    <html lang="ko" suppressHydrationWarning>
+      <head>
+        <ThemeScript />
+      </head>
+      <body>
+        <AppPreferencesProvider>{children}</AppPreferencesProvider>
+      </body>
     </html>
   );
 }
