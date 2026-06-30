@@ -1,24 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import SectionCard from "@/components/SectionCard";
-import TextAreaField from "@/components/TextAreaField";
-import InputField from "@/components/InputField";
-import SelectField from "@/components/SelectField";
-import ActionButton from "@/components/ActionButton";
-import StructuredSummary from "@/components/StructuredSummary";
-import MissingInfoList from "@/components/MissingInfoList";
-import EngineerQuestionsPanel from "@/components/EngineerQuestionsPanel";
-import MarkdownOutput from "@/components/MarkdownOutput";
-import ReviewIssuesPanel from "@/components/ReviewIssuesPanel";
-import LoadingState from "@/components/LoadingState";
-import TechnicalEnglishCoach from "@/components/TechnicalEnglishCoach";
-import GlobalDocsMode from "@/components/GlobalDocsMode";
-import DocumentationImprovementLoop from "@/components/DocumentationImprovementLoop";
-import PremiumShell from "@/components/shell/PremiumShell";
-import BentoGuide from "@/components/shell/BentoGuide";
+import { AppHeader } from "@/components/workspace/app-header";
+import { HeroPanel } from "@/components/workspace/hero-panel";
+import { ApiSourcePanel } from "@/components/workspace/api-source-panel";
+import { AiReviewPanel } from "@/components/workspace/ai-review-panel";
+import { DocumentationPanel } from "@/components/workspace/documentation-panel";
+import ShellControls from "@/components/shell/ShellControls";
 import { useAppPreferences } from "@/components/shell/AppPreferencesProvider";
-import type { ActiveTab } from "@/components/shell/types";
 import { callAi } from "@/lib/client";
 import {
   normalizeEngineerQuestions,
@@ -57,7 +46,6 @@ export default function Page() {
   const [coachResult, setCoachResult] = useState<TechnicalEnglishResult | null>(
     null
   );
-  const [activeTab, setActiveTab] = useState<ActiveTab>(null);
   const [globalResult, setGlobalResult] = useState<GlobalDocsResult | null>(
     null
   );
@@ -379,24 +367,6 @@ export default function Page() {
 
   const loadingLabel = (action: AiAction) => t(`loading.${action}`);
 
-  const apiBento = [
-    { label: t("bento.api.step1Label"), value: t("bento.api.step1Value") },
-    { label: t("bento.api.step2Label"), value: t("bento.api.step2Value") },
-    { label: t("bento.api.step3Label"), value: t("bento.api.step3Value") },
-  ];
-
-  const docsBento = [
-    { label: t("bento.docs.workflowLabel"), value: t("bento.docs.workflowValue") },
-    { label: t("bento.docs.convertLabel"), value: t("bento.docs.convertValue") },
-    { label: t("bento.docs.qualityLabel"), value: t("bento.docs.qualityValue") },
-  ];
-
-  const loopBento = [
-    { label: t("bento.loop.reviewLabel"), value: t("bento.loop.reviewValue") },
-    { label: t("bento.loop.patchLabel"), value: t("bento.loop.patchValue") },
-    { label: t("bento.loop.targetLabel"), value: t("bento.loop.targetValue") },
-  ];
-
   const readerOptions = [
     { value: "beginner", label: t("api.readerBeginner") },
     { value: "frontend", label: t("api.readerFrontend") },
@@ -411,396 +381,100 @@ export default function Page() {
     { value: "unknown", label: t("api.authUnknown") },
   ];
 
+  const fileBaseName =
+    (project?.title || "api-documentation")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "") || "api-documentation";
+
+  function exportMarkdown() {
+    const md = project?.docDraftMarkdown ?? "";
+    if (!md.trim()) return;
+    const blob = new Blob([md], { type: "text/markdown;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${fileBaseName}.md`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  const hasSavedState = hydrated && (!!project || !formIsEmpty);
+
   return (
-    <PremiumShell
-      activeTab={activeTab}
-      onTabChange={setActiveTab}
-      error={error}
-      onDismissError={() => setError(null)}
-    >
-      {activeTab === "api" && (
-        <>
-          <BentoGuide items={apiBento} />
+    <main className="min-h-screen bg-background">
+      <ShellControls />
+      <AppHeader
+        onLoadSample={loadSample}
+        onReset={reset}
+        onExport={exportMarkdown}
+        hasDraft={!!project?.docDraftMarkdown?.trim()}
+        hasSavedState={hasSavedState}
+        disabled={isBusy}
+      />
 
-          <div className="mb-6 flex flex-wrap items-center gap-2 rounded-2xl border border-slate-200 bg-white p-3 dark:border-slate-800/70 dark:bg-slate-900/20">
-            <ActionButton variant="secondary" onClick={loadSample} disabled={isBusy}>
-              {t("api.loadSample")}
-            </ActionButton>
-            <ActionButton
-              variant="primary"
-              onClick={handleAnalyze}
-              loading={busy === "analyze"}
-              loadingText={loadingLabel("analyze")}
-              disabled={isBusy}
+      {error && (
+        <div className="mx-auto max-w-7xl px-4 pt-4 sm:px-6">
+          <div className="flex items-start gap-3 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-500/20 dark:bg-rose-500/[0.08] dark:text-rose-200">
+            <span className="flex-1">{error}</span>
+            <button
+              type="button"
+              onClick={() => setError(null)}
+              className="text-rose-400/80 transition hover:text-rose-600 dark:hover:text-rose-200"
+              aria-label={t("controls.close")}
             >
-              {t("api.analyze")}
-            </ActionButton>
-            <ActionButton
-              onClick={handleMissingInfo}
-              loading={busy === "missing_info"}
-              loadingText={loadingLabel("missing_info")}
-              disabled={isBusy || !project}
-            >
-              {t("api.missingInfo")}
-            </ActionButton>
-            <ActionButton
-              onClick={handleEngineerQuestions}
-              loading={busy === "engineer_questions"}
-              loadingText={loadingLabel("engineer_questions")}
-              disabled={isBusy || !project}
-            >
-              {t("api.engineerQuestions")}
-            </ActionButton>
-            <ActionButton
-              onClick={handleGenerateDoc}
-              loading={busy === "generate_doc"}
-              loadingText={loadingLabel("generate_doc")}
-              disabled={isBusy || !project}
-            >
-              {t("api.generateDoc")}
-            </ActionButton>
-            <ActionButton
-              onClick={handleReviewDoc}
-              loading={busy === "review_doc"}
-              loadingText={loadingLabel("review_doc")}
-              disabled={isBusy || !project?.docDraftMarkdown}
-            >
-              {t("api.reviewDoc")}
-            </ActionButton>
-            <div className="ml-auto">
-              <ActionButton variant="danger" onClick={reset} disabled={isBusy}>
-                {t("api.reset")}
-              </ActionButton>
-            </div>
+              ✕
+            </button>
           </div>
-
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
-        {/* LEFT: input */}
-        <div className="space-y-3 lg:col-span-4">
-          <h2 className="px-1 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-            {t("api.colInput")}
-          </h2>
-
-          <SectionCard
-            title={t("api.coachTitle")}
-            description={t("api.coachDesc")}
-            defaultOpen={false}
-          >
-            <TechnicalEnglishCoach
-              result={coachResult}
-              loading={busy === "technical_english_coach"}
-              canApply={!!project}
-              onConvert={handleTechnicalEnglish}
-              onApply={applyEnglishToDraft}
-            />
-          </SectionCard>
-
-          <SectionCard title={t("api.rawNotesTitle")} description={t("api.rawNotesDesc")}>
-            <TextAreaField
-              label={t("api.rawNotesLabel")}
-              value={form.rawNotes}
-              onChange={(v) => setField("rawNotes", v)}
-              rows={8}
-              mono
-              placeholder={t("api.rawNotesPlaceholder")}
-            />
-          </SectionCard>
-
-          <SectionCard title={t("api.basicInfo")}>
-            <InputField
-              label={t("api.featureName")}
-              value={form.featureName}
-              onChange={(v) => setField("featureName", v)}
-              placeholder="Create a user"
-            />
-            <InputField
-              label={t("api.endpointTitle")}
-              value={form.endpointTitle}
-              onChange={(v) => setField("endpointTitle", v)}
-              placeholder="Create a user"
-            />
-            <InputField
-              label={t("api.productArea")}
-              value={form.productArea}
-              onChange={(v) => setField("productArea", v)}
-              placeholder="Chat Platform API"
-            />
-            <SelectField
-              label={t("api.targetReader")}
-              value={form.targetReader}
-              onChange={(v) => setField("targetReader", v as RawFormInput["targetReader"])}
-              options={readerOptions}
-            />
-            <TextAreaField
-              label={t("api.useCase")}
-              value={form.useCase}
-              onChange={(v) => setField("useCase", v)}
-              rows={2}
-              placeholder="Create a user before starting a chat"
-            />
-          </SectionCard>
-
-          <SectionCard title={t("api.endpoint")}>
-            <SelectField
-              label={t("api.httpMethod")}
-              value={form.method}
-              onChange={(v) => setField("method", v as RawFormInput["method"])}
-              options={[
-                { value: "GET", label: "GET" },
-                { value: "POST", label: "POST" },
-                { value: "PUT", label: "PUT" },
-                { value: "PATCH", label: "PATCH" },
-                { value: "DELETE", label: "DELETE" },
-              ]}
-            />
-            <InputField
-              label={t("api.endpointUrl")}
-              value={form.endpointUrl}
-              onChange={(v) => setField("endpointUrl", v)}
-              placeholder="/v3/users"
-            />
-            <TextAreaField
-              label={t("api.description")}
-              value={form.description}
-              onChange={(v) => setField("description", v)}
-              rows={2}
-              placeholder="Creates a new user in the application."
-            />
-          </SectionCard>
-
-          <SectionCard title={t("api.authHeaders")} defaultOpen={false}>
-            <SelectField
-              label={t("api.authType")}
-              value={form.authType}
-              onChange={(v) => setField("authType", v as RawFormInput["authType"])}
-              options={authOptions}
-            />
-            <TextAreaField
-              label={t("api.requiredHeaders")}
-              value={form.requiredHeaders}
-              onChange={(v) => setField("requiredHeaders", v)}
-              rows={3}
-              mono
-              placeholder={"Content-Type: application/json\nApi-Token: {your_api_token}"}
-            />
-            <TextAreaField
-              label={t("api.optionalHeaders")}
-              value={form.optionalHeaders}
-              onChange={(v) => setField("optionalHeaders", v)}
-              rows={2}
-              mono
-            />
-            <TextAreaField
-              label={t("api.securityNote")}
-              value={form.securityNote}
-              onChange={(v) => setField("securityNote", v)}
-              rows={2}
-              placeholder="API token must stay server-side."
-            />
-          </SectionCard>
-
-          <SectionCard title={t("api.request")} defaultOpen={false}>
-            <TextAreaField
-              label={t("api.pathParams")}
-              value={form.pathParams}
-              onChange={(v) => setField("pathParams", v)}
-              rows={2}
-              mono
-            />
-            <TextAreaField
-              label={t("api.queryParams")}
-              value={form.queryParams}
-              onChange={(v) => setField("queryParams", v)}
-              rows={2}
-              mono
-            />
-            <TextAreaField
-              label={t("api.requestBody")}
-              value={form.requestBody}
-              onChange={(v) => setField("requestBody", v)}
-              rows={4}
-              mono
-            />
-            <TextAreaField
-              label={t("api.exampleRequest")}
-              value={form.exampleRequest}
-              onChange={(v) => setField("exampleRequest", v)}
-              rows={4}
-              mono
-            />
-          </SectionCard>
-
-          <SectionCard title={t("api.response")} defaultOpen={false}>
-            <InputField
-              label={t("api.successStatus")}
-              value={form.successStatus}
-              onChange={(v) => setField("successStatus", v)}
-              placeholder="200"
-            />
-            <TextAreaField
-              label={t("api.responseBody")}
-              value={form.responseBody}
-              onChange={(v) => setField("responseBody", v)}
-              rows={4}
-              mono
-            />
-            <TextAreaField
-              label={t("api.exampleResponse")}
-              value={form.exampleResponse}
-              onChange={(v) => setField("exampleResponse", v)}
-              rows={4}
-              mono
-            />
-          </SectionCard>
-
-          <SectionCard title={t("api.errors")} defaultOpen={false}>
-            <TextAreaField
-              label={t("api.errorCases")}
-              value={form.errorCases}
-              onChange={(v) => setField("errorCases", v)}
-              rows={4}
-              mono
-              placeholder={"400 Bad Request: missing required field\n401 Unauthorized: invalid API token"}
-            />
-          </SectionCard>
-
-          <SectionCard title={t("api.operationalNotes")} defaultOpen={false}>
-            <InputField
-              label={t("api.rateLimit")}
-              value={form.rateLimit}
-              onChange={(v) => setField("rateLimit", v)}
-            />
-            <InputField
-              label={t("api.pagination")}
-              value={form.pagination}
-              onChange={(v) => setField("pagination", v)}
-            />
-            <InputField
-              label={t("api.webhook")}
-              value={form.webhook}
-              onChange={(v) => setField("webhook", v)}
-            />
-            <InputField
-              label={t("api.retryBehavior")}
-              value={form.retryBehavior}
-              onChange={(v) => setField("retryBehavior", v)}
-            />
-            <InputField
-              label={t("api.idempotency")}
-              value={form.idempotency}
-              onChange={(v) => setField("idempotency", v)}
-            />
-          </SectionCard>
         </div>
-
-        {/* MIDDLE: structured summary */}
-        <div className="space-y-3 lg:col-span-4">
-          <h2 className="px-1 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-            {t("api.colSummary")}
-          </h2>
-
-          {busy === "analyze" && <LoadingState label={loadingLabel("analyze")} />}
-
-          <SectionCard title={t("api.structuredSummary")} collapsible={false}>
-            <StructuredSummary project={project} />
-          </SectionCard>
-
-          <SectionCard title={t("api.missingInformation")}>
-            {busy === "missing_info" ? (
-              <LoadingState label={loadingLabel("missing_info")} />
-            ) : (
-              <MissingInfoList items={project?.missingInfo ?? []} />
-            )}
-          </SectionCard>
-
-          <SectionCard title={t("api.engineerQuestions")}>
-            {busy === "engineer_questions" ? (
-              <LoadingState label={loadingLabel("engineer_questions")} />
-            ) : (
-              <EngineerQuestionsPanel
-                questions={project?.engineerQuestions ?? []}
-                onUpdate={updateQuestion}
-                onCopyAll={copyEngineerQuestions}
-              />
-            )}
-          </SectionCard>
-        </div>
-
-        {/* RIGHT: documentation output */}
-        <div className="space-y-3 lg:col-span-4">
-          <h2 className="px-1 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-            {t("api.colOutput")}
-          </h2>
-
-          <SectionCard title={t("api.documentationDraft")} collapsible={false}>
-            <div className="mb-3 flex flex-wrap gap-2">
-              <ActionButton
-                variant="primary"
-                size="sm"
-                onClick={() => setActiveTab("loop")}
-                disabled={!project?.docDraftMarkdown?.trim()}
-                title={t("api.runLoopTitle")}
-              >
-                {t("api.runLoop")}
-              </ActionButton>
-            </div>
-            {busy === "generate_doc" ? (
-              <LoadingState label={loadingLabel("generate_doc")} />
-            ) : (
-              <MarkdownOutput
-                markdown={project?.docDraftMarkdown ?? ""}
-                onChange={updateDoc}
-                fileBaseName={
-                  (project?.title || "api-documentation")
-                    .toLowerCase()
-                    .replace(/[^a-z0-9]+/g, "-")
-                    .replace(/^-+|-+$/g, "") || "api-documentation"
-                }
-              />
-            )}
-          </SectionCard>
-
-          <SectionCard title={t("api.aiReview")}>
-            {busy === "review_doc" ? (
-              <LoadingState label={loadingLabel("review_doc")} />
-            ) : (
-              <ReviewIssuesPanel
-                issues={project?.reviewIssues ?? []}
-                hasReviewed={hasReviewed}
-              />
-            )}
-          </SectionCard>
-        </div>
-          </div>
-        </>
       )}
 
-      {activeTab === "docs" && (
-        <>
-          <BentoGuide items={docsBento} />
-          <GlobalDocsMode
-            result={globalResult}
-            converting={busy === "global_docs_convert"}
-            reviewing={busy === "language_quality_review"}
-            canApply
-            onConvert={handleGlobalConvert}
-            onReview={handleGlobalReview}
-            onApply={applyEnglishToDraft}
+      <div className="mx-auto max-w-7xl space-y-5 px-4 py-6 sm:px-6">
+        <HeroPanel />
+        <div className="grid items-start gap-5 lg:grid-cols-3">
+          <ApiSourcePanel
+            form={form}
+            setField={setField}
+            busy={busy}
+            isBusy={isBusy}
+            hasProject={!!project}
+            readerOptions={readerOptions}
+            authOptions={authOptions}
+            loadingLabel={loadingLabel}
+            onAnalyze={handleAnalyze}
+            onMissingInfo={handleMissingInfo}
+            onEngineerQuestions={handleEngineerQuestions}
+            onGenerateDoc={handleGenerateDoc}
+            globalResult={globalResult}
+            onGlobalConvert={handleGlobalConvert}
+            onGlobalReview={handleGlobalReview}
+            onApplyGlobal={applyEnglishToDraft}
+            coachResult={coachResult}
+            onTechnicalEnglish={handleTechnicalEnglish}
+            onApplyEnglish={applyEnglishToDraft}
           />
-        </>
-      )}
-
-      {activeTab === "loop" && (
-        <>
-          <BentoGuide items={loopBento} />
-          <DocumentationImprovementLoop
+          <AiReviewPanel
             project={project}
-            currentDraft={project?.docDraftMarkdown ?? ""}
+            busy={busy}
+            isBusy={isBusy}
+            hasReviewed={hasReviewed}
+            loadingLabel={loadingLabel}
+            onReviewDoc={handleReviewDoc}
+            onUpdateQuestion={updateQuestion}
+            onCopyQuestions={copyEngineerQuestions}
+          />
+          <DocumentationPanel
+            project={project}
+            markdown={project?.docDraftMarkdown ?? ""}
+            onChange={updateDoc}
+            fileBaseName={fileBaseName}
             targetReader={form.targetReader}
             onApplyToMainDraft={(text) => applyDraftToMain(text, "replace")}
           />
-        </>
-      )}
-    </PremiumShell>
+        </div>
+      </div>
+    </main>
   );
 }

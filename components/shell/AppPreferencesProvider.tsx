@@ -30,6 +30,7 @@ const AppPreferencesContext = createContext<AppPreferencesContextValue | null>(
 
 function applyTheme(theme: Theme) {
   document.documentElement.setAttribute("data-theme", theme);
+  document.documentElement.classList.toggle("dark", theme === "dark");
   document.documentElement.lang = document.documentElement.lang || "ko";
 }
 
