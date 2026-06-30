@@ -1,0 +1,81 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  @apply bg-slate-50 text-slate-800 antialiased;
+}
+
+/* Thin, professional scrollbars */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: #cbd5e1;
+  border-radius: 9999px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Basic readable styling for the rendered Markdown preview */
+.markdown-preview h1 {
+  @apply text-2xl font-bold text-slate-900 mt-2 mb-3;
+}
+.markdown-preview h2 {
+  @apply text-lg font-semibold text-slate-900 mt-5 mb-2 border-b border-slate-200 pb-1;
+}
+.markdown-preview h3 {
+  @apply text-base font-semibold text-slate-900 mt-4 mb-1;
+}
+.markdown-preview p {
+  @apply my-2 leading-relaxed text-slate-700;
+}
+.markdown-preview ul {
+  @apply list-disc pl-5 my-2 space-y-1 text-slate-700;
+}
+.markdown-preview ol {
+  @apply list-decimal pl-5 my-2 space-y-1 text-slate-700;
+}
+.markdown-preview code {
+  @apply font-mono text-[0.85em] bg-slate-100 text-brand-700 rounded px-1 py-0.5;
+}
+.markdown-preview pre {
+  @apply bg-slate-900 text-slate-100 rounded-lg p-3 my-3 overflow-x-auto text-xs;
+}
+.markdown-preview pre code {
+  @apply bg-transparent text-slate-100 p-0;
+}
+.markdown-preview table {
+  @apply w-full border-collapse my-3 text-sm;
+}
+.markdown-preview th,
+.markdown-preview td {
+  @apply border border-slate-200 px-2 py-1 text-left;
+}
+.markdown-preview th {
+  @apply bg-slate-50 font-semibold;
+}
+.markdown-preview a {
+  @apply text-brand-600 underline;
+}
+.markdown-preview blockquote {
+  @apply border-l-4 border-amber-300 bg-amber-50 pl-3 py-1 my-3 text-slate-700;
+}

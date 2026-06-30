@@ -1,0 +1,107 @@
+import type {
+  AuthType,
+  HttpMethod,
+  Priority,
+  QuestionStatus,
+  ReviewIssueCategory,
+  TargetReader,
+} from "@/lib/types";
+
+const METHOD_STYLES: Record<HttpMethod, string> = {
+  GET: "bg-emerald-50 text-emerald-700 ring-emerald-200",
+  POST: "bg-blue-50 text-blue-700 ring-blue-200",
+  PUT: "bg-amber-50 text-amber-700 ring-amber-200",
+  PATCH: "bg-violet-50 text-violet-700 ring-violet-200",
+  DELETE: "bg-rose-50 text-rose-700 ring-rose-200",
+};
+
+const PRIORITY_STYLES: Record<Priority, string> = {
+  high: "bg-rose-50 text-rose-700 ring-rose-200",
+  medium: "bg-amber-50 text-amber-700 ring-amber-200",
+  low: "bg-slate-100 text-slate-600 ring-slate-200",
+};
+
+const STATUS_STYLES: Record<QuestionStatus, string> = {
+  open: "bg-slate-100 text-slate-600 ring-slate-200",
+  answered: "bg-blue-50 text-blue-700 ring-blue-200",
+  applied: "bg-emerald-50 text-emerald-700 ring-emerald-200",
+};
+
+export const READER_LABELS: Record<TargetReader, string> = {
+  beginner: "Beginner developer",
+  frontend: "Frontend developer",
+  backend: "Backend developer",
+  technical_writer: "Technical writer",
+};
+
+export const AUTH_LABELS: Record<AuthType, string> = {
+  api_token: "API token",
+  bearer_token: "Bearer token",
+  none: "None",
+  unknown: "Unknown",
+};
+
+export const CATEGORY_LABELS: Record<ReviewIssueCategory, string> = {
+  clarity: "Clarity",
+  consistency: "Consistency",
+  terminology: "Terminology",
+  security: "Security",
+  missing_example: "Missing example",
+  client_server_confusion: "Client/Server",
+  accuracy: "Accuracy",
+  structure: "Structure",
+};
+
+const PRIORITY_LABELS: Record<Priority, string> = {
+  high: "High",
+  medium: "Medium",
+  low: "Low",
+};
+
+const STATUS_LABELS: Record<QuestionStatus, string> = {
+  open: "Open",
+  answered: "Answered",
+  applied: "Applied",
+};
+
+function base(extra: string) {
+  return `inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium ring-1 ring-inset ${extra}`;
+}
+
+export function MethodBadge({ method }: { method: HttpMethod }) {
+  return <span className={base(METHOD_STYLES[method])}>{method}</span>;
+}
+
+export function PriorityBadge({ priority }: { priority: Priority }) {
+  return (
+    <span className={base(PRIORITY_STYLES[priority])}>
+      {PRIORITY_LABELS[priority]}
+    </span>
+  );
+}
+
+export function StatusBadge({ status }: { status: QuestionStatus }) {
+  return (
+    <span className={base(STATUS_STYLES[status])}>{STATUS_LABELS[status]}</span>
+  );
+}
+
+export function CategoryBadge({
+  category,
+}: {
+  category: ReviewIssueCategory;
+}) {
+  return (
+    <span className={base("bg-brand-50 text-brand-700 ring-brand-200")}>
+      {CATEGORY_LABELS[category]}
+    </span>
+  );
+}
+
+export function Pill({ children }: { children: React.ReactNode }) {
+  return (
+    <span className={base("bg-slate-100 text-slate-700 ring-slate-200")}>
+      {children}
+    </span>
+  );
+}
