@@ -18,11 +18,19 @@ let cachedClient: OpenAI | null = null;
  * Throws a clear error (without leaking the key) if the key is missing.
  */
 export function getOpenAIClient(): OpenAI {
-  const apiKey = process.env.OPENAI_API_KEY;
+  const apiKey = process.env.OPENAI_API_KEY?.trim();
   if (!apiKey) {
-    // SECURITY: do not log the key. Only signal that it is absent.
     throw new Error(
-      "OPENAI_API_KEY is not configured. Add it to .env.local (see .env.example)."
+      "OPENAI_API_KEY가 설정되지 않았습니다. .env.local 파일에 키를 추가하세요 (예: .env.example 참고)."
+    );
+  }
+  if (
+    apiKey === "sk-your-key-here" ||
+    apiKey.includes("your-key") ||
+    apiKey.endsWith("-here")
+  ) {
+    throw new Error(
+      "OPENAI_API_KEY가 예시 값(sk-your-key-here)입니다. .env.local에 실제 OpenAI API 키를 넣고 개발 서버를 재시작하세요."
     );
   }
   if (!cachedClient) {

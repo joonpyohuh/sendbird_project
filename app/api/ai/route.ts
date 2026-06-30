@@ -112,12 +112,19 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ action, data: parsed });
   } catch (err) {
-    // SECURITY: never echo secrets. Surface a safe, generic message.
-    const message =
+    // SECURITY: never echo secrets. Surface a safe, user-friendly message.
+    let message =
       err instanceof Error ? err.message : "Unexpected server error.";
-    return NextResponse.json(
-      { error: message },
-      { status: 500 }
-    );
+
+    if (/401|Incorrect API key|invalid_api_key/i.test(message)) {
+      message =
+        "OpenAI API 키가 올바르지 않습니다. .env.local의 OPENAI_API_KEY를 확인하고 개발 서버를 재시작하세요.";
+    } else if (/429|rate limit/i.test(message)) {
+      message = "OpenAI API 요청 한도에 도달했습니다. 잠시 후 다시 시도하세요.";
+    } else if (/ENOTFOUND|ECONNREFUSED|fetch failed/i.test(message)) {
+      message = "OpenAI API에 연결할 수 없습니다. 네트워크 연결을 확인하세요.";
+    }
+
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
