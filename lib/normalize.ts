@@ -35,6 +35,7 @@ import type {
   SectionPatch,
   TokenSavingLoopIteration,
 } from "./types";
+import { EMPTY_FORM } from "./sample";
 
 export function uid(prefix = "id"): string {
   return `${prefix}_${Math.random().toString(36).slice(2, 10)}`;
@@ -74,6 +75,73 @@ export function computeFormFingerprint(form: RawFormInput): string {
     payload[key] = String(form[key] ?? "").trim();
   }
   return JSON.stringify(payload);
+}
+
+/**
+ * When the writer replaces raw notes with a new API, drop stale structured fields
+ * (e.g. leftover sample requestBody with "junpyo") that no longer match the notes.
+ */
+export function reconcileFormWithRawNotes(
+  form: RawFormInput,
+  newRawNotes: string
+): RawFormInput {
+  const notes = newRawNotes.trim();
+  if (!notes) return { ...form, rawNotes: newRawNotes };
+
+  const endpoint = form.endpointUrl.trim();
+  const feature = form.featureName.trim();
+  const structuredLikelyStale =
+    (endpoint.length > 0 && !notes.includes(endpoint)) ||
+    (feature.length > 0 &&
+      !notes.toLowerCase().includes(feature.toLowerCase()));
+
+  if (structuredLikelyStale) {
+    return {
+      ...EMPTY_FORM,
+      rawNotes: notes,
+      targetReader: form.targetReader,
+    };
+  }
+  return { ...form, rawNotes: newRawNotes };
+}
+
+/** Analyze uses raw notes as the only source when present — not leftover form fields. */
+export function buildAnalyzePayload(form: RawFormInput): Record<string, unknown> {
+  const rawNotes = form.rawNotes.trim();
+  if (rawNotes) {
+    return {
+      mode: "raw_notes_primary",
+      rawNotes,
+      targetReader: form.targetReader,
+    };
+  }
+  return { mode: "structured_form", form };
+}
+
+/**
+ * Attach authoritative raw notes to project payloads so doc generation cannot
+ * drift back to cached sample examples.
+ */
+export function buildProjectAiPayload(
+  project: ApiDocProject,
+  form: RawFormInput
+): Record<string, unknown> {
+  const authoritativeRawNotes =
+    form.rawNotes.trim() || project.rawNotes?.trim() || "";
+
+  if (!authoritativeRawNotes) {
+    return { project };
+  }
+
+  return {
+    project: {
+      ...project,
+      rawNotes: authoritativeRawNotes,
+      request: { ...project.request, example: "" },
+      response: { ...project.response, example: "" },
+    },
+    authoritativeRawNotes,
+  };
 }
 
 export function isProjectFresh(

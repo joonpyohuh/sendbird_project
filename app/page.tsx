@@ -11,6 +11,8 @@ import { useAppPreferences } from "@/components/shell/AppPreferencesProvider";
 import { getPriorityLabel, useTranslatedOptions } from "@/lib/i18n/helpers";
 import { callAi } from "@/lib/client";
 import {
+  buildAnalyzePayload,
+  buildProjectAiPayload,
   computeFormFingerprint,
   isProjectFresh,
   normalizeEngineerQuestions,
@@ -21,6 +23,7 @@ import {
   normalizeReviewIssues,
   normalizeTechnicalEnglish,
   projectFromForm,
+  reconcileFormWithRawNotes,
   uid,
 } from "@/lib/normalize";
 import { EMPTY_FORM, SAMPLE_FORM } from "@/lib/sample";
@@ -36,8 +39,8 @@ import type {
   TechnicalEnglishResult,
 } from "@/lib/types";
 
-const FORM_KEY = "adw_form_v1";
-const PROJECT_KEY = "adw_project_v1";
+const FORM_KEY = "adw_form_v2";
+const PROJECT_KEY = "adw_project_v2";
 type FeatureStep = "input" | "review" | "docs";
 
 export default function Page() {
@@ -94,7 +97,10 @@ export default function Page() {
   useEffect(() => {
     try {
       const savedForm = localStorage.getItem(FORM_KEY);
-      if (savedForm) setForm({ ...EMPTY_FORM, ...JSON.parse(savedForm) });
+      if (savedForm) {
+        const parsed = { ...EMPTY_FORM, ...JSON.parse(savedForm) } as RawFormInput;
+        setForm(reconcileFormWithRawNotes(parsed, parsed.rawNotes));
+      }
       const savedProject = localStorage.getItem(PROJECT_KEY);
       if (savedProject) {
         const parsed = JSON.parse(savedProject) as ApiDocProject;
@@ -131,6 +137,13 @@ export default function Page() {
     key: K,
     value: RawFormInput[K]
   ) {
+    if (key === "rawNotes") {
+      setForm((prev) =>
+        reconcileFormWithRawNotes(prev, String(value))
+      );
+      setHasReviewed(false);
+      return;
+    }
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 
@@ -173,11 +186,15 @@ export default function Page() {
     setBusy("analyze");
     setError(null);
     try {
-      const res = await callAi("analyze", { form });
+      const res = await callAi("analyze", buildAnalyzePayload(form));
       const normalized = normalizeProject(res.data ?? {}, uid("proj"));
       // Keep raw notes from the form for traceability.
-      normalized.rawNotes = form.rawNotes;
+      normalized.rawNotes = form.rawNotes.trim();
       normalized.sourceFingerprint = formFingerprint;
+      normalized.docDraftMarkdown = "";
+      normalized.reviewIssues = [];
+      normalized.missingInfo = normalized.missingInfo ?? [];
+      normalized.engineerQuestions = [];
       setProject(normalized);
       setHasReviewed(false);
       scrollToFeature("review");
@@ -201,7 +218,10 @@ export default function Page() {
     setBusy("missing_info");
     setError(null);
     try {
-      const res = await callAi("missing_info", { project: activeProject });
+      const res = await callAi(
+        "missing_info",
+        buildProjectAiPayload(activeProject, form)
+      );
       const items = normalizeMissingInfo(res.data?.missingInfo);
       setProject((prev) => (prev ? { ...prev, missingInfo: items } : prev));
       scrollToFeature("review");
@@ -218,7 +238,10 @@ export default function Page() {
     setBusy("engineer_questions");
     setError(null);
     try {
-      const res = await callAi("engineer_questions", { project: activeProject });
+      const res = await callAi(
+        "engineer_questions",
+        buildProjectAiPayload(activeProject, form)
+      );
       const questions = normalizeEngineerQuestions(res.data?.engineerQuestions);
       setProject((prev) =>
         prev ? { ...prev, engineerQuestions: questions } : prev
@@ -237,7 +260,10 @@ export default function Page() {
     setBusy("generate_doc");
     setError(null);
     try {
-      const res = await callAi("generate_doc", { project: activeProject });
+      const res = await callAi(
+        "generate_doc",
+        buildProjectAiPayload(activeProject, form)
+      );
       const md = (res.markdown ?? "").trim();
       setProject((prev) => (prev ? { ...prev, docDraftMarkdown: md } : prev));
       setHasReviewed(false);
@@ -260,7 +286,7 @@ export default function Page() {
     try {
       const res = await callAi("review_doc", {
         markdown: activeProject.docDraftMarkdown,
-        project: activeProject,
+        ...buildProjectAiPayload(activeProject, form),
       });
       const issues = normalizeReviewIssues(res.data?.reviewIssues);
       setProject((prev) => (prev ? { ...prev, reviewIssues: issues } : prev));

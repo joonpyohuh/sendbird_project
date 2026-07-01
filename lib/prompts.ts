@@ -31,6 +31,11 @@ and no leading or trailing text. The response must be parseable by JSON.parse.`;
 export const ANALYZE_PROMPT = `Task: Convert the provided raw API notes and form fields into a structured
 ApiDocProject JSON object.
 
+INPUT MODES:
+- When mode is "raw_notes_primary": use ONLY the rawNotes string as the source of truth.
+  Ignore any other cached or sample data. Extract everything from rawNotes alone.
+- When mode is "structured_form": use the form object fields.
+
 Rules:
 - Extract method, endpoint URL, description, auth type, required/optional headers,
   path/query parameters, request body fields, response fields, errors, and
@@ -84,6 +89,9 @@ ${JSON_ONLY_INSTRUCTION}`;
  * Missing Info: detect documentation gaps in an existing ApiDocProject.
  */
 export const MISSING_INFO_PROMPT = `Task: Review the provided ApiDocProject JSON and find documentation gaps.
+
+When authoritativeRawNotes is present, evaluate gaps based on that text and the
+project — not leftover examples from unrelated APIs.
 
 Look specifically for gaps in:
 - required vs optional fields
@@ -150,6 +158,11 @@ ${JSON_ONLY_INSTRUCTION}`;
  */
 export const GENERATE_DOC_PROMPT = `Task: Generate developer-facing API documentation in Markdown from the provided
 ApiDocProject JSON. Incorporate any answered engineer questions.
+
+When authoritativeRawNotes is present, base the ENTIRE document ONLY on that text
+and the structured project derived from it. Do NOT reuse names, endpoints, or examples
+from any prior session (for example "junpyo", "/v3/users") unless they explicitly
+appear in authoritativeRawNotes or the current project.
 
 Use EXACTLY this section structure (omit a section only if there is truly nothing,
 otherwise state "unknown"):
