@@ -240,6 +240,199 @@ Be concrete. If the draft is solid, return a short list (or an empty array).
 
 ${JSON_ONLY_INSTRUCTION}`;
 
+/** Documentation QA pipeline — expert TW + QA reviewer identity. */
+export const DOC_QA_IDENTITY = `You are an expert Technical Writer and Documentation QA reviewer.
+
+Your task is NOT to rewrite the documentation from scratch every time.
+Follow the review pipeline step instructions precisely.
+Do not invent API fields, endpoints, or examples.
+Mark unknown values as "unknown" — do not guess.`;
+
+export const DOC_QA_STRUCTURE_PROMPT = `STEP 1 — Structure Review
+
+Review the generated API documentation (markdown field).
+
+Check for:
+- Duplicate sections
+- Missing sections
+- Incorrect heading hierarchy
+- Markdown formatting issues
+- Broken tables
+- Repeated examples
+- Repeated request/response bodies
+
+Return ONLY a JSON object:
+{
+  "issues": [
+    { "issue": string, "location": string, "severity": "high"|"medium"|"low" }
+  ]
+}
+
+Do NOT rewrite the document. List issues only.
+
+${JSON_ONLY_INSTRUCTION}`;
+
+export const DOC_QA_CONSISTENCY_PROMPT = `STEP 2 — Consistency Review
+
+Review the document (markdown field) for consistency.
+
+Check whether:
+- field names are consistent
+- types are consistent
+- Required values are consistent
+- unknown / Unknown are consistent
+- endpoint matches HTTP method
+- request and response examples match the tables
+- path/query/body parameters are correctly categorized
+
+Return ONLY a JSON object:
+{
+  "inconsistencies": [
+    { "inconsistency": string, "details": string, "severity": "high"|"medium"|"low" }
+  ]
+}
+
+Do NOT rewrite the document. List inconsistencies only.
+
+${JSON_ONLY_INSTRUCTION}`;
+
+export const DOC_QA_TW_REVIEW_PROMPT = `STEP 3 — Technical Writer Review
+
+Review the documentation (markdown field) like a senior Technical Writer.
+
+Evaluate:
+- clarity
+- readability
+- logical flow
+- unnecessary wording
+- duplicated explanations
+- grammar
+- terminology consistency
+
+Return ONLY a JSON object:
+{
+  "suggestions": [
+    { "area": string, "suggestion": string, "severity": "high"|"medium"|"low" }
+  ]
+}
+
+Suggest improvements only. Do NOT rewrite the document.
+
+${JSON_ONLY_INSTRUCTION}`;
+
+/** Dedicated deduplication editor — fixes repeated Request/Response sections in place. */
+export const DOC_QA_DEDUPLICATE_PROMPT = `You are a Technical Documentation QA Validator and Editor.
+
+Your task is to fix duplicated sections in API documentation (markdown field).
+
+IMPORTANT:
+Do not rewrite the document from scratch.
+Do not append a new version below the existing document.
+Edit the existing document in place.
+
+Validation rules:
+1. Each heading must appear only once under the same parent section.
+2. The document must contain exactly one "## Request" section.
+3. The document must contain exactly one "### Request body" section.
+4. The document must contain exactly one "## Response" section.
+5. The document must contain exactly one "### Success status" section.
+6. The document must contain exactly one "### Response fields" section.
+7. The document must contain exactly one "## Error responses" section.
+8. The document must contain exactly one "## Notes" section.
+9. If duplicate sections contain the same table, keep only the first complete version.
+10. If duplicate sections conflict, keep the version that is most consistent with the example request or example response.
+
+Fixing rules:
+- Remove duplicated headings and duplicated tables.
+- Keep only one complete Request body table.
+- Keep only one complete Response fields table.
+- Do not change API facts unless there is an inconsistency.
+- Do not invent new fields.
+- Do not add new sections.
+- Preserve Markdown formatting.
+- Preserve the original order of sections.
+
+After editing, run this final checklist silently:
+[ ] No duplicate Request body sections
+[ ] No duplicate Success status sections
+[ ] No duplicate Response fields sections
+[ ] No duplicate tables
+[ ] No repeated examples
+[ ] Markdown headings are valid
+[ ] Final output is a single clean document
+
+Output only the cleaned final document. No commentary before or after.`;
+
+export const DOC_QA_EDIT_PROMPT = `STEP 4 — Editor
+
+Revise the ORIGINAL document (markdown field).
+
+Apply ONLY the issues found in previous steps:
+- structureIssues
+- consistencyIssues
+- twSuggestions
+- validationFailures (if present from a prior validation pass)
+
+Rules:
+- Do NOT generate a second copy of the document.
+- Edit the existing document in place.
+- Never append another version below.
+- Never duplicate sections.
+- Each heading must appear only once under the same parent section.
+- Keep exactly one "## Request", one "### Request body", one "## Response",
+  one "### Success status", one "### Response fields", one "## Error responses",
+  and one "## Notes" section.
+- If duplicate sections contain the same table, keep only the first complete version.
+- If duplicate sections conflict, keep the version most consistent with examples.
+- Never invent API fields.
+- Preserve all original information unless correcting a detected issue.
+- Keep the same document structure and section order.
+
+Output ONLY the final revised Markdown document. No commentary before or after.`;
+
+export const DOC_QA_VALIDATE_PROMPT = `STEP 5 — Validator
+
+Validate the document (markdown field).
+
+Checklist — evaluate each item:
+[ ] No duplicate headings under the same parent
+[ ] Exactly one "## Request" section
+[ ] Exactly one "### Request body" section
+[ ] Exactly one "## Response" section
+[ ] Exactly one "### Success status" section
+[ ] Exactly one "### Response fields" section
+[ ] Exactly one "## Error responses" section
+[ ] Exactly one "## Notes" section
+[ ] No duplicated tables
+[ ] No duplicated request body content
+[ ] No duplicated response body content
+[ ] Markdown renders correctly
+[ ] Heading hierarchy is valid
+[ ] All examples match the schema
+[ ] unknown formatting is consistent
+
+Return ONLY a JSON object:
+{
+  "passesAll": boolean,
+  "checks": {
+    "noDuplicateHeadings": boolean,
+    "noDuplicatedTables": boolean,
+    "noDuplicatedRequestBody": boolean,
+    "noDuplicatedResponseBody": boolean,
+    "markdownRendersCorrectly": boolean,
+    "validHeadingHierarchy": boolean,
+    "examplesMatchSchema": boolean,
+    "unknownFormattingConsistent": boolean,
+    "requestResponseSectionsOnce": boolean
+  },
+  "failedChecks": [string]
+}
+
+Set passesAll to true ONLY when every checklist item passes.
+Do NOT rewrite the document.
+
+${JSON_ONLY_INSTRUCTION}`;
+
 /**
  * Technical English Coach identity. This task uses a dedicated system message
  * because the goal is teaching, not the documentation-structuring identity above.
@@ -645,6 +838,18 @@ export function getTaskPrompt(action: AiAction): string {
       return IMPROVEMENT_LOOP_REVIEW_PROMPT;
     case "run_improvement_loop_patch":
       return IMPROVEMENT_LOOP_PATCH_PROMPT;
+    case "doc_qa_structure":
+      return DOC_QA_STRUCTURE_PROMPT;
+    case "doc_qa_consistency":
+      return DOC_QA_CONSISTENCY_PROMPT;
+    case "doc_qa_tw_review":
+      return DOC_QA_TW_REVIEW_PROMPT;
+    case "doc_qa_edit":
+      return DOC_QA_EDIT_PROMPT;
+    case "doc_qa_validate":
+      return DOC_QA_VALIDATE_PROMPT;
+    case "doc_qa_deduplicate":
+      return DOC_QA_DEDUPLICATE_PROMPT;
     default:
       return "";
   }
@@ -666,6 +871,13 @@ export function getSystemIdentity(action: AiAction): string {
     case "run_improvement_loop_review":
     case "run_improvement_loop_patch":
       return IMPROVEMENT_LOOP_TOKEN_IDENTITY;
+    case "doc_qa_structure":
+    case "doc_qa_consistency":
+    case "doc_qa_tw_review":
+    case "doc_qa_edit":
+    case "doc_qa_validate":
+    case "doc_qa_deduplicate":
+      return DOC_QA_IDENTITY;
     default:
       return SYSTEM_IDENTITY;
   }
@@ -673,5 +885,9 @@ export function getSystemIdentity(action: AiAction): string {
 
 /** Whether a given action expects a JSON response (vs raw Markdown text). */
 export function expectsJson(action: AiAction): boolean {
-  return action !== "generate_doc";
+  return (
+    action !== "generate_doc" &&
+    action !== "doc_qa_edit" &&
+    action !== "doc_qa_deduplicate"
+  );
 }

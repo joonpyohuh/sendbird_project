@@ -28,6 +28,12 @@ const VALID_ACTIONS: AiAction[] = [
   "run_improvement_loop_iteration",
   "run_improvement_loop_review",
   "run_improvement_loop_patch",
+  "doc_qa_structure",
+  "doc_qa_consistency",
+  "doc_qa_tw_review",
+  "doc_qa_edit",
+  "doc_qa_validate",
+  "doc_qa_deduplicate",
 ];
 
 function isValidAction(action: unknown): action is AiAction {

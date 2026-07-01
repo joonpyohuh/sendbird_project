@@ -133,7 +133,63 @@ export type AiAction =
   | "language_quality_review"
   | "run_improvement_loop_iteration"
   | "run_improvement_loop_review"
-  | "run_improvement_loop_patch";
+  | "run_improvement_loop_patch"
+  | "doc_qa_structure"
+  | "doc_qa_consistency"
+  | "doc_qa_tw_review"
+  | "doc_qa_edit"
+  | "doc_qa_validate"
+  | "doc_qa_deduplicate";
+
+// Documentation QA pipeline (5-step TW review) ----------------------------
+
+export type DocQASeverity = "high" | "medium" | "low";
+
+export type DocQAStructureIssue = {
+  issue: string;
+  location?: string;
+  severity: DocQASeverity;
+};
+
+export type DocQAConsistencyIssue = {
+  inconsistency: string;
+  details?: string;
+  severity: DocQASeverity;
+};
+
+export type DocQATwSuggestion = {
+  area: string;
+  suggestion: string;
+  severity: DocQASeverity;
+};
+
+export type DocQAValidationChecks = {
+  noDuplicateHeadings: boolean;
+  noDuplicatedTables: boolean;
+  noDuplicatedRequestBody: boolean;
+  noDuplicatedResponseBody: boolean;
+  markdownRendersCorrectly: boolean;
+  validHeadingHierarchy: boolean;
+  examplesMatchSchema: boolean;
+  unknownFormattingConsistent: boolean;
+  requestResponseSectionsOnce: boolean;
+};
+
+export type DocQAValidationResult = {
+  passesAll: boolean;
+  checks: DocQAValidationChecks;
+  failedChecks: string[];
+};
+
+export type DocQAPipelineResult = {
+  structureIssues: DocQAStructureIssue[];
+  consistencyIssues: DocQAConsistencyIssue[];
+  twSuggestions: DocQATwSuggestion[];
+  editIterations: number;
+  validationHistory: DocQAValidationResult[];
+  finalDraft: string;
+  passedValidation: boolean;
+};
 
 // Technical English Coach --------------------------------------------------
 
