@@ -281,39 +281,9 @@ export default function DocumentationImprovementLoop({
             iterationNumber: i,
           });
 
-          if (
-            lastScore !== undefined &&
-            review.scores.overall - lastScore < 3
-          ) {
-            status = "stopped";
-            finalStopReason = t("loop.scoreBelowThreshold");
-            iterations.push({
-              ...review,
-              patches: [],
-              inputDraft: workingDraft,
-              outputDraft: workingDraft,
-            });
-            break;
-          }
-
-          if (hasRepeatedIssue(review.issues, seenIssueKeys)) {
-            status = "stopped";
-            finalStopReason = t("loop.repeatedIssue");
-            iterations.push({
-              ...review,
-              patches: [],
-              inputDraft: workingDraft,
-              outputDraft: workingDraft,
-            });
-            break;
-          }
-
-          registerIssueKeys(review.issues, seenIssueKeys);
-          lastScore = review.scores.overall;
-          unresolvedIssues = review.issues;
-
           let patches: TokenSavingLoopIteration["patches"] = [];
           let outputDraft = workingDraft;
+          let finalReview = review;
 
           const shouldPatch =
             !review.stopRecommended &&
@@ -343,12 +313,94 @@ export default function DocumentationImprovementLoop({
             }
           }
 
+          let patchChangedDraft = outputDraft.trim() !== workingDraft.trim();
+          if (!review.stopRecommended && !patchChangedDraft) {
+            // If targeted patches are empty or fail to match headings, fall back
+            // to the full-iteration path so the loop still produces an improved
+            // candidate instead of echoing the original draft as "best".
+            setPhase("improving");
+            const fallbackRes = await callAi("run_improvement_loop_iteration", {
+              currentDraft: workingDraft,
+              apiProject: project,
+              styleGuide: style,
+              targetReader,
+              settings: {
+                ...settings,
+                allowFullRewrite: true,
+                tokenSavingMode: false,
+              },
+              iterationNumber: i,
+            });
+
+            if (abortRef.current) break;
+
+            const fallback = normalizeLoopIteration(fallbackRes.data ?? {}, {
+              iterationNumber: i,
+              inputDraft: workingDraft,
+            });
+
+            if (fallback.outputDraft.trim() !== workingDraft.trim()) {
+              outputDraft = fallback.outputDraft;
+              patchChangedDraft = true;
+              finalReview = {
+                iterationNumber: fallback.iterationNumber,
+                scores: fallback.scores,
+                issues: fallback.issues,
+                patchPlan: {
+                  summary: fallback.summary || review.patchPlan.summary,
+                  sectionsToPatch: review.patchPlan.sectionsToPatch,
+                  estimatedImpact: review.patchPlan.estimatedImpact,
+                },
+                engineerQuestions: fallback.engineerQuestions,
+                stopRecommended: fallback.stopRecommended,
+                stopReason: fallback.stopReason,
+              };
+            }
+          }
+
+          if (patchChangedDraft) {
+            // Score the patched draft, not the pre-patch review. Without this
+            // pass, the UI can show a flat score even when the document changed.
+            setPhase("reviewing");
+            const postPatchReviewRes = await callAi("run_improvement_loop_review", {
+              currentDraft: outputDraft,
+              apiProjectSummary: apiSummary,
+              styleGuide: style,
+              targetReader,
+              settings,
+              iterationNumber: i,
+              lastScore,
+              unresolvedIssues:
+                unresolvedIssues.length > 0 ? unresolvedIssues : undefined,
+            });
+
+            if (abortRef.current) break;
+
+            setPhase("scoring");
+            finalReview = normalizeLoopReview(postPatchReviewRes.data ?? {}, {
+              iterationNumber: i,
+            });
+          }
+
           const iteration: TokenSavingLoopIteration = {
-            ...review,
+            ...finalReview,
             patches,
             inputDraft: workingDraft,
             outputDraft,
           };
+
+          const scoreDelta =
+            lastScore === undefined
+              ? undefined
+              : iteration.scores.overall - lastScore;
+          const repeatedIssue = hasRepeatedIssue(
+            iteration.issues,
+            seenIssueKeys
+          );
+
+          registerIssueKeys(iteration.issues, seenIssueKeys);
+          lastScore = iteration.scores.overall;
+          unresolvedIssues = iteration.issues;
 
           iterations.push(iteration);
           workingDraft = outputDraft;
@@ -369,6 +421,18 @@ export default function DocumentationImprovementLoop({
             blockingQuestions: collectBlockingQuestions(iterations),
           });
 
+          if (scoreDelta !== undefined && scoreDelta < 3) {
+            status = "stopped";
+            finalStopReason = t("loop.scoreBelowThreshold");
+            break;
+          }
+
+          if (repeatedIssue) {
+            status = "stopped";
+            finalStopReason = t("loop.repeatedIssue");
+            break;
+          }
+
           if (iteration.scores.overall >= settings.targetScore) {
             status = "completed";
             finalStopReason = t("loop.targetReached");
@@ -387,10 +451,10 @@ export default function DocumentationImprovementLoop({
             break;
           }
 
-          if (review.stopRecommended) {
+          if (iteration.stopRecommended) {
             status = "stopped";
             finalStopReason =
-              review.stopReason || t("loop.stopRecommendedByReviewer");
+              iteration.stopReason || t("loop.stopRecommendedByReviewer");
             break;
           }
         } else {

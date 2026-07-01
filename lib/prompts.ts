@@ -465,6 +465,9 @@ Return ONLY compact JSON:
 }
 
 Do NOT include patches, outputDraft, or full draft text.
+Evaluate the provided currentDraft independently. If lastScore is present, use it only as context;
+do not copy or preserve the previous score when the currentDraft has improved.
+When choosing sectionsToPatch, use exact heading titles that already exist in currentDraft whenever possible.
 
 ${JSON_ONLY_INSTRUCTION}`;
 
@@ -479,6 +482,10 @@ Rules:
 - Do NOT return unchanged sections or the full document.
 - Do NOT invent technical facts. Mark unknowns as "Unknown" or ask via engineer question (not in this pass).
 - Follow settings.mode and styleGuide when provided.
+- Prefer action="replace" for existing headings. Use the exact currentDraft heading text as sectionTitle
+  so the patch can be applied deterministically.
+- If a needed section is missing, use action="insert_after" with targetSection set to an existing heading.
+- The patch must materially improve the section. Do not return empty markdown or unchanged text.
 
 Return ONLY compact JSON:
 {
@@ -581,6 +588,8 @@ Return ONLY JSON matching this LoopIteration shape:
 
 Do NOT include "id" fields in issues/improvements/questions — the server will assign them.
 Echo inputDraft from the provided currentDraft. Set iterationNumber from the input.
+outputDraft must be materially improved from currentDraft. Do not echo currentDraft unchanged unless
+stopRecommended is true because no safe improvement is possible; in that case explain why in stopReason.
 
 ${JSON_ONLY_INSTRUCTION}`;
 

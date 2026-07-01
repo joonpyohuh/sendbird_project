@@ -75,7 +75,8 @@ function findSectionIndex(
 
   idx = sections.findIndex(
     (s) =>
-      normTitle(s.title).includes(target) || target.includes(normTitle(s.title))
+      normTitle(s.title).length > 0 &&
+      (normTitle(s.title).includes(target) || target.includes(normTitle(s.title)))
   );
   return idx;
 }
@@ -109,6 +110,9 @@ export function applyMarkdownPatches(
 
   for (const patch of patches) {
     const title = patch.sectionTitle.trim();
+    if (patch.action !== "delete" && !patch.markdown.trim()) {
+      continue;
+    }
     const md = ensureHeading(title || patch.sectionTitle, patch.markdown);
 
     switch (patch.action) {
