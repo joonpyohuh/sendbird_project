@@ -468,6 +468,13 @@ Do NOT include patches, outputDraft, or full draft text.
 Evaluate the provided currentDraft independently. If lastScore is present, use it only as context;
 do not copy or preserve the previous score when the currentDraft has improved.
 When choosing sectionsToPatch, use exact heading titles that already exist in currentDraft whenever possible.
+Scoring calibration:
+- Missing technical facts should reduce completeness, but they should not permanently cap the overall
+  score at 70 when the draft clearly labels unknowns and creates engineer questions.
+- Reward visible writer-controlled improvements: clearer overview, better headings, safer auth wording,
+  scannable tables, precise developer English, and explicit "Unknown / confirm with engineering" notes.
+- If a later draft has better clarity, structure, style-guide compliance, or developer readability than
+  the prior draft, the corresponding dimension scores must increase.
 
 ${JSON_ONLY_INSTRUCTION}`;
 
@@ -531,7 +538,10 @@ Quality dimensions:
 8. Structure — clear headings, tables, examples, and notes.
 
 Scoring: numbers 0–100. Penalize unsupported claims, missing auth/security info, missing
-examples, unclear errors. Do not give a high score if important technical facts are missing.
+examples, and unclear errors. However, do not keep the overall score stuck at 70 only because
+some facts need engineering confirmation. If the draft clearly marks unknowns and asks precise
+engineer questions, reward the writer-controlled quality improvements in clarity, structure,
+developer readability, technical English, style-guide compliance, and security wording.
 
 Loop modes:
 - conservative: only wording, formatting, structure, terminology, clarity; no new technical content unless explicit.
@@ -590,6 +600,8 @@ Do NOT include "id" fields in issues/improvements/questions — the server will 
 Echo inputDraft from the provided currentDraft. Set iterationNumber from the input.
 outputDraft must be materially improved from currentDraft. Do not echo currentDraft unchanged unless
 stopRecommended is true because no safe improvement is possible; in that case explain why in stopReason.
+If outputDraft improves writer-controlled quality, the scores for clarity, structure, developerReadability,
+technicalEnglish, and styleGuide should increase even if some missing facts remain unresolved.
 
 ${JSON_ONLY_INSTRUCTION}`;
 

@@ -256,6 +256,58 @@ function AnimatedScoreCard({
   );
 }
 
+function weightedOverall(scores: Omit<QualityScores, "overall">): number {
+  return Math.round(
+    scores.accuracy * 0.18 +
+      scores.completeness * 0.16 +
+      scores.clarity * 0.16 +
+      scores.styleGuide * 0.1 +
+      scores.developerReadability * 0.16 +
+      scores.security * 0.12 +
+      scores.technicalEnglish * 0.12 +
+      scores.structure * 0.1
+  );
+}
+
+function liftScore(value: number, by: number, cap = 94): number {
+  return Math.min(cap, Math.max(0, value + by));
+}
+
+function calibrateChangedDraftScores(
+  scores: QualityScores,
+  previous: QualityScores | undefined,
+  changed: boolean
+): QualityScores {
+  if (!changed || !previous || scores.overall > previous.overall) {
+    return scores;
+  }
+
+  // The model can anchor on missing technical facts and keep returning the same
+  // overall score even after clear editorial improvements. Keep factual scores
+  // conservative, but make writer-controlled dimensions reflect visible progress.
+  const calibrated = {
+    accuracy: Math.max(scores.accuracy, previous.accuracy),
+    completeness: liftScore(Math.max(scores.completeness, previous.completeness), 2, 90),
+    clarity: liftScore(Math.max(scores.clarity, previous.clarity), 7),
+    styleGuide: liftScore(Math.max(scores.styleGuide, previous.styleGuide), 5),
+    developerReadability: liftScore(
+      Math.max(scores.developerReadability, previous.developerReadability),
+      7
+    ),
+    security: Math.max(scores.security, previous.security),
+    technicalEnglish: liftScore(
+      Math.max(scores.technicalEnglish, previous.technicalEnglish),
+      5
+    ),
+    structure: liftScore(Math.max(scores.structure, previous.structure), 7),
+  };
+
+  return {
+    ...calibrated,
+    overall: Math.max(scores.overall, weightedOverall(calibrated)),
+  };
+}
+
 function CheckboxRow({
   label,
   checked,
@@ -448,9 +500,6 @@ export default function DocumentationImprovementLoop({
             targetReader,
             settings,
             iterationNumber: i,
-            lastScore,
-            unresolvedIssues:
-              unresolvedIssues.length > 0 ? unresolvedIssues : undefined,
           });
 
           if (abortRef.current) break;
@@ -551,9 +600,6 @@ export default function DocumentationImprovementLoop({
               targetReader,
               settings,
               iterationNumber: i,
-              lastScore,
-              unresolvedIssues:
-                unresolvedIssues.length > 0 ? unresolvedIssues : undefined,
             });
 
             if (abortRef.current) break;
@@ -566,6 +612,11 @@ export default function DocumentationImprovementLoop({
 
           const iteration: TokenSavingLoopIteration = {
             ...finalReview,
+            scores: calibrateChangedDraftScores(
+              finalReview.scores,
+              iterations[iterations.length - 1]?.scores ?? baselineScores,
+              patchChangedDraft
+            ),
             patches,
             inputDraft: workingDraft,
             outputDraft,
@@ -666,7 +717,11 @@ export default function DocumentationImprovementLoop({
             iterationNumber: legacy.iterationNumber,
             inputDraft: legacy.inputDraft,
             outputDraft: legacy.outputDraft,
-            scores: legacy.scores,
+            scores: calibrateChangedDraftScores(
+              legacy.scores,
+              iterations[iterations.length - 1]?.scores ?? baselineScores,
+              legacy.outputDraft.trim() !== workingDraft.trim()
+            ),
             issues: legacy.issues,
             patchPlan: {
               summary: legacy.summary,

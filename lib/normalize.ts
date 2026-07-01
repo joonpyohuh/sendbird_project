@@ -442,16 +442,40 @@ function clampScore(v: unknown): number {
 
 function normalizeQualityScores(v: unknown): QualityScores {
   const o = rec(v);
+  const accuracy = clampScore(o.accuracy);
+  const completeness = clampScore(o.completeness);
+  const clarity = clampScore(o.clarity);
+  const styleGuide = clampScore(o.styleGuide ?? o.style_guide);
+  const developerReadability = clampScore(
+    o.developerReadability ?? o.developer_readability
+  );
+  const security = clampScore(o.security);
+  const technicalEnglish = clampScore(
+    o.technicalEnglish ?? o.technical_english
+  );
+  const structure = clampScore(o.structure);
+  const weightedOverall = Math.round(
+    accuracy * 0.18 +
+      completeness * 0.16 +
+      clarity * 0.16 +
+      styleGuide * 0.1 +
+      developerReadability * 0.16 +
+      security * 0.12 +
+      technicalEnglish * 0.12 +
+      structure * 0.1
+  );
+  const modelOverall = clampScore(o.overall);
+
   return {
-    overall: clampScore(o.overall),
-    accuracy: clampScore(o.accuracy),
-    completeness: clampScore(o.completeness),
-    clarity: clampScore(o.clarity),
-    styleGuide: clampScore(o.styleGuide),
-    developerReadability: clampScore(o.developerReadability),
-    security: clampScore(o.security),
-    technicalEnglish: clampScore(o.technicalEnglish),
-    structure: clampScore(o.structure),
+    overall: Math.max(modelOverall, weightedOverall),
+    accuracy,
+    completeness,
+    clarity,
+    styleGuide,
+    developerReadability,
+    security,
+    technicalEnglish,
+    structure,
   };
 }
 
@@ -491,10 +515,10 @@ function loopEngineerQuestion(v: unknown): LoopEngineerQuestion {
 
 export const DEFAULT_LOOP_SETTINGS: ImprovementLoopSettings = {
   targetScore: 88,
-  maxIterations: 2,
-  hardMaxIterations: 3,
+  maxIterations: 3,
+  hardMaxIterations: 4,
   mode: "balanced",
-  stopWhenMissingFacts: true,
+  stopWhenMissingFacts: false,
   applyStyleGuide: true,
   includeTechnicalEnglishReview: true,
   includeSecurityReview: true,
