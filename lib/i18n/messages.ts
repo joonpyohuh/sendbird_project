@@ -110,6 +110,8 @@ export const messages: Record<Locale, MessageTree> = {
       copied: "복사됨!",
       exportMd: ".md 내보내기",
       previewError: "미리보기를 렌더링할 수 없습니다.",
+      staleProjectBanner:
+        "입력 내용이 변경되었습니다. 이전 분석·문서 결과는 숨겨졌습니다. 'API 분석'을 다시 실행해 현재 원문 기준으로 결과를 생성하세요.",
     },
     featureNav: {
       inputEyebrow: "대표 기능 1",
@@ -510,6 +512,8 @@ Use backticks for field names.`,
       analyzeFallback: "분석에 실패했습니다.",
       analyzeFallbackSuffix: " 기본 요약으로 대체했습니다.",
       needAnalyze: "먼저 'API 분석'을 실행해주세요.",
+      staleProject:
+        "입력이 변경되어 이전 결과가 더 이상 유효하지 않습니다. 'API 분석'을 다시 실행해주세요.",
       missingInfoFail: "누락 정보 탐색에 실패했습니다.",
       questionsFail: "질문 생성에 실패했습니다.",
       generateFail: "문서 생성에 실패했습니다.",
@@ -628,6 +632,8 @@ Use backticks for field names.`,
       copied: "Copied!",
       exportMd: "Export .md",
       previewError: "Unable to render preview.",
+      staleProjectBanner:
+        "Your input changed. Previous analysis and docs are hidden. Run Analyze API again to generate results from your current notes.",
     },
     featureNav: {
       inputEyebrow: "Feature 1",
@@ -1027,6 +1033,8 @@ Use backticks for field names.`,
       analyzeFallback: "Analysis failed.",
       analyzeFallbackSuffix: " Replaced with a basic summary.",
       needAnalyze: "Run 'Analyze API' first.",
+      staleProject:
+        "Your input changed and cached results are no longer valid. Run Analyze API again.",
       missingInfoFail: "Failed to find missing information.",
       questionsFail: "Failed to generate questions.",
       generateFail: "Failed to generate documentation.",

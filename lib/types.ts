@@ -116,6 +116,8 @@ export type ApiDocProject = {
   docDraftMarkdown: string;
   reviewIssues: ReviewIssue[];
   technicalEnglish?: TechnicalEnglishResult | null;
+  /** Hash of form fields at last Analyze — used to detect stale cached results. */
+  sourceFingerprint?: string;
 };
 
 // AI route contract -----------------------------------------------------------

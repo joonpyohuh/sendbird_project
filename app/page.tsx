@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, ArrowRight, FileText, ScanSearch, WandSparkles } from "lucide-react";
 import { AppHeader } from "@/components/workspace/app-header";
 import { ApiSourcePanel } from "@/components/workspace/api-source-panel";
@@ -11,6 +11,8 @@ import { useAppPreferences } from "@/components/shell/AppPreferencesProvider";
 import { getPriorityLabel, useTranslatedOptions } from "@/lib/i18n/helpers";
 import { callAi } from "@/lib/client";
 import {
+  computeFormFingerprint,
+  isProjectFresh,
   normalizeEngineerQuestions,
   normalizeGlobalDocsResult,
   normalizeLanguageQualityIssues,
@@ -54,6 +56,39 @@ export default function Page() {
     null
   );
   const [hydrated, setHydrated] = useState(false);
+  const inputSectionRef = useRef<HTMLDivElement>(null);
+  const reviewSectionRef = useRef<HTMLDivElement>(null);
+  const docsSectionRef = useRef<HTMLDivElement>(null);
+
+  const formFingerprint = useMemo(() => computeFormFingerprint(form), [form]);
+  const projectIsFresh = isProjectFresh(project, form);
+  const projectIsStale = !!project && !projectIsFresh;
+
+  function scrollToFeature(step: FeatureStep) {
+    setActiveFeature(step);
+    const target =
+      step === "input"
+        ? inputSectionRef
+        : step === "review"
+          ? reviewSectionRef
+          : docsSectionRef;
+    requestAnimationFrame(() => {
+      target.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }
+
+  function requireFreshProject(): ApiDocProject | null {
+    if (!project) {
+      setError(t("errors.needAnalyze"));
+      return null;
+    }
+    if (!projectIsFresh) {
+      setError(t("errors.staleProject"));
+      scrollToFeature("input");
+      return null;
+    }
+    return project;
+  }
 
   // Load persisted state from localStorage on mount.
   useEffect(() => {
@@ -104,7 +139,9 @@ export default function Page() {
     setProject(null);
     setHasReviewed(false);
     setCoachResult(null);
+    setGlobalResult(null);
     setError(null);
+    scrollToFeature("input");
   }
 
   function reset() {
@@ -140,14 +177,15 @@ export default function Page() {
       const normalized = normalizeProject(res.data ?? {}, uid("proj"));
       // Keep raw notes from the form for traceability.
       normalized.rawNotes = form.rawNotes;
+      normalized.sourceFingerprint = formFingerprint;
       setProject(normalized);
       setHasReviewed(false);
-      // Reveal the structured result immediately.
-      setActiveFeature("review");
+      scrollToFeature("review");
     } catch (e) {
-      // Fallback: build a basic project locally so the writer is not blocked.
-      setProject(projectFromForm(form));
-      setActiveFeature("review");
+      const fallback = projectFromForm(form);
+      fallback.sourceFingerprint = formFingerprint;
+      setProject(fallback);
+      scrollToFeature("review");
       setError(
         (e instanceof Error ? e.message : t("errors.analyzeFallback")) +
           t("errors.analyzeFallbackSuffix")
@@ -158,17 +196,15 @@ export default function Page() {
   }
 
   async function handleMissingInfo() {
-    if (!project) {
-      setError(t("errors.needAnalyze"));
-      return;
-    }
+    const activeProject = requireFreshProject();
+    if (!activeProject) return;
     setBusy("missing_info");
     setError(null);
     try {
-      const res = await callAi("missing_info", { project });
+      const res = await callAi("missing_info", { project: activeProject });
       const items = normalizeMissingInfo(res.data?.missingInfo);
       setProject((prev) => (prev ? { ...prev, missingInfo: items } : prev));
-      setActiveFeature("review");
+      scrollToFeature("review");
     } catch (e) {
       setError(e instanceof Error ? e.message : t("errors.missingInfoFail"));
     } finally {
@@ -177,19 +213,17 @@ export default function Page() {
   }
 
   async function handleEngineerQuestions() {
-    if (!project) {
-      setError(t("errors.needAnalyze"));
-      return;
-    }
+    const activeProject = requireFreshProject();
+    if (!activeProject) return;
     setBusy("engineer_questions");
     setError(null);
     try {
-      const res = await callAi("engineer_questions", { project });
+      const res = await callAi("engineer_questions", { project: activeProject });
       const questions = normalizeEngineerQuestions(res.data?.engineerQuestions);
       setProject((prev) =>
         prev ? { ...prev, engineerQuestions: questions } : prev
       );
-      setActiveFeature("review");
+      scrollToFeature("review");
     } catch (e) {
       setError(e instanceof Error ? e.message : t("errors.questionsFail"));
     } finally {
@@ -198,19 +232,16 @@ export default function Page() {
   }
 
   async function handleGenerateDoc() {
-    if (!project) {
-      setError(t("errors.needAnalyze"));
-      return;
-    }
+    const activeProject = requireFreshProject();
+    if (!activeProject) return;
     setBusy("generate_doc");
     setError(null);
     try {
-      const res = await callAi("generate_doc", { project });
+      const res = await callAi("generate_doc", { project: activeProject });
       const md = (res.markdown ?? "").trim();
       setProject((prev) => (prev ? { ...prev, docDraftMarkdown: md } : prev));
       setHasReviewed(false);
-      // Jump straight to the generated document.
-      setActiveFeature("docs");
+      scrollToFeature("docs");
     } catch (e) {
       setError(e instanceof Error ? e.message : t("errors.generateFail"));
     } finally {
@@ -219,7 +250,8 @@ export default function Page() {
   }
 
   async function handleReviewDoc() {
-    if (!project || !project.docDraftMarkdown.trim()) {
+    const activeProject = requireFreshProject();
+    if (!activeProject?.docDraftMarkdown.trim()) {
       setError(t("errors.needGenerate"));
       return;
     }
@@ -227,13 +259,13 @@ export default function Page() {
     setError(null);
     try {
       const res = await callAi("review_doc", {
-        markdown: project.docDraftMarkdown,
-        project,
+        markdown: activeProject.docDraftMarkdown,
+        project: activeProject,
       });
       const issues = normalizeReviewIssues(res.data?.reviewIssues);
       setProject((prev) => (prev ? { ...prev, reviewIssues: issues } : prev));
       setHasReviewed(true);
-      setActiveFeature("review");
+      scrollToFeature("review");
     } catch (e) {
       setError(e instanceof Error ? e.message : t("errors.reviewFail"));
     } finally {
@@ -386,7 +418,7 @@ export default function Page() {
       .replace(/^-+|-+$/g, "") || "api-documentation";
 
   function exportMarkdown() {
-    const md = project?.docDraftMarkdown ?? "";
+    const md = displayProject?.docDraftMarkdown ?? "";
     if (!md.trim()) return;
     const blob = new Blob([md], { type: "text/markdown;charset=utf-8" });
     const url = URL.createObjectURL(blob);
@@ -436,8 +468,10 @@ export default function Page() {
       direction === "next"
         ? (activeIndex + 1) % featureSteps.length
         : (activeIndex - 1 + featureSteps.length) % featureSteps.length;
-    setActiveFeature(featureSteps[nextIndex].id);
+    scrollToFeature(featureSteps[nextIndex].id);
   };
+
+  const displayProject = projectIsFresh ? project : null;
 
   return (
     <main className="min-h-screen bg-background">
@@ -446,7 +480,7 @@ export default function Page() {
         onLoadSample={loadSample}
         onReset={reset}
         onExport={exportMarkdown}
-        hasDraft={!!project?.docDraftMarkdown?.trim()}
+        hasDraft={!!displayProject?.docDraftMarkdown?.trim()}
         hasSavedState={hasSavedState}
         disabled={isBusy}
       />
@@ -499,7 +533,7 @@ export default function Page() {
                         <button
                           key={step.id}
                           type="button"
-                          onClick={() => setActiveFeature(step.id)}
+                          onClick={() => scrollToFeature(step.id)}
                           className={`flex items-center gap-3 rounded-xl border px-3 py-3 text-left transition ${
                             active
                               ? "border-primary bg-primary text-primary-foreground shadow-sm"
@@ -544,14 +578,20 @@ export default function Page() {
               </div>
             </aside>
 
-            <div className="min-h-[40rem] bg-background/60 p-4 sm:p-5 lg:p-6">
-              <div className={activeFeature === "input" ? "block" : "hidden"}>
+            <div className="max-h-[calc(100vh-8rem)] overflow-y-auto bg-background/60 p-4 sm:p-5 lg:p-6">
+              {projectIsStale && (
+                <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100">
+                  {t("workspace.staleProjectBanner")}
+                </div>
+              )}
+
+              <div ref={inputSectionRef} className="scroll-mt-6 pb-8">
                 <ApiSourcePanel
                   form={form}
                   setField={setField}
                   busy={busy}
                   isBusy={isBusy}
-                  hasProject={!!project}
+                  hasProject={projectIsFresh}
                   readerOptions={readerOptions}
                   authOptions={authOptions}
                   loadingLabel={loadingLabel}
@@ -568,9 +608,10 @@ export default function Page() {
                   onApplyEnglish={applyEnglishToDraft}
                 />
               </div>
-              <div className={activeFeature === "review" ? "block" : "hidden"}>
+
+              <div ref={reviewSectionRef} className="scroll-mt-6 border-t border-border pt-8 pb-8">
                 <AiReviewPanel
-                  project={project}
+                  project={displayProject}
                   busy={busy}
                   isBusy={isBusy}
                   hasReviewed={hasReviewed}
@@ -580,10 +621,11 @@ export default function Page() {
                   onCopyQuestions={copyEngineerQuestions}
                 />
               </div>
-              <div className={activeFeature === "docs" ? "block" : "hidden"}>
+
+              <div ref={docsSectionRef} className="scroll-mt-6 border-t border-border pt-8">
                 <DocumentationPanel
-                  project={project}
-                  markdown={project?.docDraftMarkdown ?? ""}
+                  project={displayProject}
+                  markdown={displayProject?.docDraftMarkdown ?? ""}
                   onChange={updateDoc}
                   fileBaseName={fileBaseName}
                   targetReader={form.targetReader}

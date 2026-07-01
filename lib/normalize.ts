@@ -40,6 +40,50 @@ export function uid(prefix = "id"): string {
   return `${prefix}_${Math.random().toString(36).slice(2, 10)}`;
 }
 
+const FORM_FINGERPRINT_KEYS: (keyof RawFormInput)[] = [
+  "rawNotes",
+  "featureName",
+  "method",
+  "endpointUrl",
+  "productArea",
+  "targetReader",
+  "useCase",
+  "description",
+  "authType",
+  "pathParams",
+  "queryParams",
+  "requestBody",
+  "exampleRequest",
+  "successStatus",
+  "responseBody",
+  "exampleResponse",
+  "errorCases",
+  "rateLimit",
+  "pagination",
+  "webhook",
+  "retryBehavior",
+  "idempotency",
+  "securityNote",
+  "endpointTitle",
+];
+
+/** Stable fingerprint so we can tell when cached project results are out of date. */
+export function computeFormFingerprint(form: RawFormInput): string {
+  const payload: Record<string, string> = {};
+  for (const key of FORM_FINGERPRINT_KEYS) {
+    payload[key] = String(form[key] ?? "").trim();
+  }
+  return JSON.stringify(payload);
+}
+
+export function isProjectFresh(
+  project: ApiDocProject | null,
+  form: RawFormInput
+): boolean {
+  if (!project?.sourceFingerprint) return false;
+  return project.sourceFingerprint === computeFormFingerprint(form);
+}
+
 const METHODS: HttpMethod[] = ["GET", "POST", "PUT", "PATCH", "DELETE"];
 const AUTH_TYPES: AuthType[] = ["api_token", "bearer_token", "none", "unknown"];
 const READERS: TargetReader[] = [
@@ -277,6 +321,7 @@ export function projectFromForm(form: RawFormInput): ApiDocProject {
     docDraftMarkdown: "",
     reviewIssues: [],
     technicalEnglish: null,
+    sourceFingerprint: computeFormFingerprint(form),
   };
 }
 
