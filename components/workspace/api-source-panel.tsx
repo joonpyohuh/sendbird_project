@@ -91,17 +91,17 @@ function ApiInputTab({
     <div className="space-y-4">
       <div className="overflow-hidden rounded-2xl border border-primary/20 bg-gradient-to-br from-primary-soft via-card to-surface-subtle p-4 shadow-sm">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-lg shadow-primary/20">
-            <FileInput className="h-5 w-5" />
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
+            <FileInput className="h-4 w-4" />
           </div>
           <div>
-            <p className="text-xs font-bold uppercase tracking-wide text-primary-dark">
+            <p className="text-xs font-semibold uppercase tracking-wide text-primary-dark">
               {t("processGuide.eyebrow")}
             </p>
-            <h3 className="mt-1 text-xl font-black tracking-tight text-foreground">
+            <h3 className="mt-1 text-base font-bold tracking-tight text-foreground">
               {t("processGuide.title")}
             </h3>
-            <p className="mt-2 text-sm leading-6 text-text-secondary">
+            <p className="mt-1.5 text-sm leading-6 text-text-secondary">
               {t("processGuide.desc")}
             </p>
           </div>

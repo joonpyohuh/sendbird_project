@@ -251,4 +251,4 @@ components/            # reusable UI components
 
 ---
 
-API Doc Workspace is a portfolio MVP. It is intentionally focused on the API documentation workflow rather than being a generic AI writing tool.
+API Doc Workspace is a production-focused tool for real Technical Writer teams. It is intentionally focused on the API documentation workflow rather than being a generic AI writing tool.

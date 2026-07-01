@@ -142,9 +142,12 @@ export default function Page() {
       normalized.rawNotes = form.rawNotes;
       setProject(normalized);
       setHasReviewed(false);
+      // Reveal the structured result immediately.
+      setActiveFeature("review");
     } catch (e) {
       // Fallback: build a basic project locally so the writer is not blocked.
       setProject(projectFromForm(form));
+      setActiveFeature("review");
       setError(
         (e instanceof Error ? e.message : t("errors.analyzeFallback")) +
           t("errors.analyzeFallbackSuffix")
@@ -165,6 +168,7 @@ export default function Page() {
       const res = await callAi("missing_info", { project });
       const items = normalizeMissingInfo(res.data?.missingInfo);
       setProject((prev) => (prev ? { ...prev, missingInfo: items } : prev));
+      setActiveFeature("review");
     } catch (e) {
       setError(e instanceof Error ? e.message : t("errors.missingInfoFail"));
     } finally {
@@ -185,6 +189,7 @@ export default function Page() {
       setProject((prev) =>
         prev ? { ...prev, engineerQuestions: questions } : prev
       );
+      setActiveFeature("review");
     } catch (e) {
       setError(e instanceof Error ? e.message : t("errors.questionsFail"));
     } finally {
@@ -204,6 +209,8 @@ export default function Page() {
       const md = (res.markdown ?? "").trim();
       setProject((prev) => (prev ? { ...prev, docDraftMarkdown: md } : prev));
       setHasReviewed(false);
+      // Jump straight to the generated document.
+      setActiveFeature("docs");
     } catch (e) {
       setError(e instanceof Error ? e.message : t("errors.generateFail"));
     } finally {
@@ -226,6 +233,7 @@ export default function Page() {
       const issues = normalizeReviewIssues(res.data?.reviewIssues);
       setProject((prev) => (prev ? { ...prev, reviewIssues: issues } : prev));
       setHasReviewed(true);
+      setActiveFeature("review");
     } catch (e) {
       setError(e instanceof Error ? e.message : t("errors.reviewFail"));
     } finally {
@@ -462,29 +470,29 @@ export default function Page() {
       <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
         <section className="overflow-hidden rounded-[2rem] border border-border bg-card shadow-xl shadow-primary/10">
           <div className="grid gap-0 lg:grid-cols-[0.9fr_1.35fr]">
-            <aside className="border-b border-border bg-gradient-to-br from-primary-soft via-background to-card p-6 sm:p-8 lg:border-b-0 lg:border-r">
-              <div className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-bold text-primary-foreground shadow-lg shadow-primary/25">
+            <aside className="border-b border-border bg-gradient-to-br from-primary-soft via-background to-card p-5 sm:p-6 lg:border-b-0 lg:border-r">
+              <div className="inline-flex items-center gap-2 rounded-full bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground shadow-sm">
                 <span>{activeStep.eyebrow}</span>
                 <span className="opacity-70">
                   {activeIndex + 1} / {featureSteps.length}
                 </span>
               </div>
 
-              <div className="mt-8 flex min-h-[34rem] flex-col justify-between">
+              <div className="mt-6 flex flex-col justify-between gap-8 lg:min-h-[30rem]">
                 <div>
-                  <div className="flex h-16 w-16 items-center justify-center rounded-3xl bg-primary text-primary-foreground shadow-lg shadow-primary/25">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-sm">
                     {activeStep.icon}
                   </div>
-                  <h1 className="mt-7 text-4xl font-black leading-tight tracking-tight text-foreground sm:text-5xl lg:text-6xl">
+                  <h1 className="mt-4 text-xl font-bold leading-snug tracking-tight text-foreground sm:text-2xl">
                     {activeStep.title}
                   </h1>
-                  <p className="mt-5 max-w-xl text-lg font-medium leading-8 text-text-secondary sm:text-xl">
+                  <p className="mt-2 max-w-xl text-sm leading-6 text-text-secondary">
                     {activeStep.description}
                   </p>
                 </div>
 
-                <div className="mt-10 space-y-5">
-                  <div className="grid gap-3">
+                <div className="space-y-4">
+                  <div className="grid gap-2">
                     {featureSteps.map((step, index) => {
                       const active = step.id === activeFeature;
                       return (
@@ -492,14 +500,14 @@ export default function Page() {
                           key={step.id}
                           type="button"
                           onClick={() => setActiveFeature(step.id)}
-                          className={`flex items-center gap-4 rounded-2xl border px-4 py-4 text-left transition ${
+                          className={`flex items-center gap-3 rounded-xl border px-3 py-3 text-left transition ${
                             active
-                              ? "border-primary bg-primary text-primary-foreground shadow-lg shadow-primary/20"
+                              ? "border-primary bg-primary text-primary-foreground shadow-sm"
                               : "border-border bg-card/80 text-text-secondary hover:border-primary/40 hover:bg-background"
                           }`}
                         >
                           <span
-                            className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-black ${
+                            className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
                               active
                                 ? "bg-white/20 text-white"
                                 : "bg-surface-subtle text-foreground"
@@ -507,36 +515,36 @@ export default function Page() {
                           >
                             {index + 1}
                           </span>
-                          <span className="text-base font-extrabold">{step.cta}</span>
+                          <span className="text-sm font-semibold">{step.cta}</span>
                         </button>
                       );
                     })}
                   </div>
 
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2">
                     <button
                       type="button"
                       onClick={() => goToFeature("prev")}
-                      className="flex h-14 w-14 items-center justify-center rounded-full border border-border bg-card text-foreground shadow-sm transition hover:border-primary hover:text-primary"
+                      className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-card text-foreground shadow-sm transition hover:border-primary hover:text-primary"
                       aria-label={t("featureNav.previous")}
                     >
-                      <ArrowLeft className="h-5 w-5" />
+                      <ArrowLeft className="h-4 w-4" />
                     </button>
                     <button
                       type="button"
                       onClick={() => goToFeature("next")}
-                      className="flex h-14 flex-1 items-center justify-center gap-3 rounded-full bg-primary px-6 text-base font-black text-primary-foreground shadow-lg shadow-primary/25 transition hover:translate-x-0.5"
+                      className="flex h-11 flex-1 items-center justify-center gap-2 rounded-full bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-sm transition hover:translate-x-0.5"
                       aria-label={t("featureNav.next")}
                     >
                       {t("featureNav.next")}
-                      <ArrowRight className="h-5 w-5" />
+                      <ArrowRight className="h-4 w-4" />
                     </button>
                   </div>
                 </div>
               </div>
             </aside>
 
-            <div className="min-h-[48rem] bg-background/60 p-4 sm:p-6 lg:p-8">
+            <div className="min-h-[40rem] bg-background/60 p-4 sm:p-5 lg:p-6">
               <div className={activeFeature === "input" ? "block" : "hidden"}>
                 <ApiSourcePanel
                   form={form}
