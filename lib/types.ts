@@ -363,6 +363,7 @@ export type ImprovementLoopResult = {
   settings: ImprovementLoopSettings;
   iterations: TokenSavingLoopIteration[];
   bestDraft: string;
+  baselineScores?: QualityScores;
   bestScores?: QualityScores;
   finalScore?: number;
   stopReason?: string;

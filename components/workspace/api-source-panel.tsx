@@ -89,6 +89,45 @@ function ApiInputTab({
 
   return (
     <div className="space-y-4">
+      <div className="overflow-hidden rounded-2xl border border-primary/20 bg-gradient-to-br from-primary-soft via-card to-surface-subtle p-4 shadow-sm">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-lg shadow-primary/20">
+            <FileInput className="h-5 w-5" />
+          </div>
+          <div>
+            <p className="text-xs font-bold uppercase tracking-wide text-primary-dark">
+              {t("processGuide.eyebrow")}
+            </p>
+            <h3 className="mt-1 text-xl font-black tracking-tight text-foreground">
+              {t("processGuide.title")}
+            </h3>
+            <p className="mt-2 text-sm leading-6 text-text-secondary">
+              {t("processGuide.desc")}
+            </p>
+          </div>
+        </div>
+        <div className="mt-4 grid gap-2 sm:grid-cols-4">
+          {[
+            t("processGuide.stepPaste"),
+            t("processGuide.stepAnalyze"),
+            t("processGuide.stepAsk"),
+            t("processGuide.stepDraft"),
+          ].map((step, index) => (
+            <div
+              key={step}
+              className="rounded-xl border border-border bg-card/80 p-3 transition duration-300 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md"
+            >
+              <span className="inline-flex h-7 w-7 animate-pulse items-center justify-center rounded-full bg-primary-soft text-xs font-black text-primary-dark">
+                {index + 1}
+              </span>
+              <p className="mt-2 text-xs font-bold leading-5 text-foreground">
+                {step}
+              </p>
+            </div>
+          ))}
+        </div>
+      </div>
+
       <TextAreaField
         label={t("api.rawNotesLabel")}
         rows={5}

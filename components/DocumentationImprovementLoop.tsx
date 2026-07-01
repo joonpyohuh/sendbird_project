@@ -79,6 +79,183 @@ function ScoreBar({ label, value }: { label: string; value: number }) {
   );
 }
 
+function formatDelta(delta: number): string {
+  if (delta > 0) return `+${delta}`;
+  return String(delta);
+}
+
+function deltaTone(delta: number): {
+  text: string;
+  bg: string;
+  ring: string;
+  bar: string;
+} {
+  if (delta > 0) {
+    return {
+      text: "text-emerald-700",
+      bg: "bg-emerald-50",
+      ring: "ring-emerald-200",
+      bar: "bg-emerald-500",
+    };
+  }
+  if (delta < 0) {
+    return {
+      text: "text-rose-700",
+      bg: "bg-rose-50",
+      ring: "ring-rose-200",
+      bar: "bg-rose-500",
+    };
+  }
+  return {
+    text: "text-slate-600",
+    bg: "bg-slate-100",
+    ring: "ring-slate-200",
+    bar: "bg-slate-400",
+  };
+}
+
+function ScoreChangeHero({
+  before,
+  after,
+  target,
+  labels,
+}: {
+  before: number;
+  after: number;
+  target: number;
+  labels: {
+    before: string;
+    after: string;
+    change: string;
+    target: string;
+    improved: string;
+    unchanged: string;
+  };
+}) {
+  const delta = after - before;
+  const tone = deltaTone(delta);
+  const beforeWidth = Math.min(100, Math.max(0, before));
+  const afterWidth = Math.min(100, Math.max(0, after));
+
+  return (
+    <div className="relative overflow-hidden rounded-2xl border border-brand-100 bg-gradient-to-br from-brand-50 via-white to-emerald-50 p-4 shadow-sm">
+      <div className="absolute -right-10 -top-10 h-28 w-28 animate-pulse rounded-full bg-brand-200/40 blur-2xl" />
+      <div className="absolute -bottom-12 left-10 h-24 w-24 animate-pulse rounded-full bg-emerald-200/40 blur-2xl" />
+
+      <div className="relative grid gap-3 sm:grid-cols-3">
+        <div className="rounded-xl bg-white/80 p-3 ring-1 ring-slate-200">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+            {labels.before}
+          </p>
+          <p className="mt-1 text-3xl font-black tabular-nums text-slate-800">
+            {before}
+          </p>
+        </div>
+        <div className="rounded-xl bg-white/80 p-3 ring-1 ring-slate-200">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+            {labels.after}
+          </p>
+          <p className="mt-1 animate-pulse text-3xl font-black tabular-nums text-brand-700">
+            {after}
+          </p>
+        </div>
+        <div className={`rounded-xl p-3 ring-1 ${tone.bg} ${tone.ring}`}>
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+            {labels.change}
+          </p>
+          <p className={`mt-1 text-3xl font-black tabular-nums ${tone.text}`}>
+            {formatDelta(delta)}
+          </p>
+        </div>
+      </div>
+
+      <div className="relative mt-4 space-y-2">
+        <div className="flex items-center justify-between text-xs font-medium text-slate-500">
+          <span>{labels.before}</span>
+          <span>
+            {labels.target}: {target}
+          </span>
+        </div>
+        <div className="h-3 overflow-hidden rounded-full bg-white ring-1 ring-slate-200">
+          <div
+            className="h-full rounded-full bg-slate-300 transition-all duration-700 ease-out"
+            style={{ width: `${beforeWidth}%` }}
+          />
+        </div>
+        <div className="h-4 overflow-hidden rounded-full bg-white ring-1 ring-brand-100">
+          <div
+            className={`h-full rounded-full ${tone.bar} transition-all duration-1000 ease-out`}
+            style={{ width: `${afterWidth}%` }}
+          >
+            <div className="h-full w-full animate-pulse bg-white/20" />
+          </div>
+        </div>
+        <p className={`text-xs font-semibold ${tone.text}`}>
+          {delta > 0 ? labels.improved : labels.unchanged}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function AnimatedScoreCard({
+  label,
+  before,
+  after,
+  beforeLabel,
+  afterLabel,
+}: {
+  label: string;
+  before: number;
+  after: number;
+  beforeLabel: string;
+  afterLabel: string;
+}) {
+  const delta = after - before;
+  const tone = deltaTone(delta);
+
+  return (
+    <div className="group rounded-xl border border-slate-200 bg-white p-3 transition duration-300 hover:-translate-y-0.5 hover:border-brand-200 hover:shadow-md">
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <span className="text-xs font-semibold text-slate-700">{label}</span>
+        <span
+          className={`rounded-full px-2 py-0.5 text-[11px] font-bold tabular-nums ring-1 ${tone.bg} ${tone.text} ${tone.ring}`}
+        >
+          {formatDelta(delta)}
+        </span>
+      </div>
+      <div className="flex items-end justify-between gap-3">
+        <div>
+          <p className="text-[10px] uppercase tracking-wide text-slate-400">
+            {beforeLabel}
+          </p>
+          <p className="text-lg font-bold tabular-nums text-slate-500">{before}</p>
+        </div>
+        <div className="flex-1 space-y-1">
+          <div className="h-1.5 overflow-hidden rounded-full bg-slate-100">
+            <div
+              className="h-full rounded-full bg-slate-300 transition-all duration-700"
+              style={{ width: `${Math.min(100, Math.max(0, before))}%` }}
+            />
+          </div>
+          <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+            <div
+              className={`h-full rounded-full ${tone.bar} transition-all duration-1000 group-hover:animate-pulse`}
+              style={{ width: `${Math.min(100, Math.max(0, after))}%` }}
+            />
+          </div>
+        </div>
+        <div className="text-right">
+          <p className="text-[10px] uppercase tracking-wide text-slate-400">
+            {afterLabel}
+          </p>
+          <p className="text-lg font-black tabular-nums text-slate-900">{after}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function CheckboxRow({
   label,
   checked,
@@ -223,6 +400,7 @@ export default function DocumentationImprovementLoop({
     let bestDraft = draft;
     let bestScore = -1;
     let bestScores: QualityScores | undefined;
+    let baselineScores: QualityScores | undefined;
     const iterations: TokenSavingLoopIteration[] = [];
     const seenIssueKeys = new Set<string>();
     let unresolvedIssues: TokenSavingLoopIteration["issues"] = [];
@@ -239,6 +417,7 @@ export default function DocumentationImprovementLoop({
         settings,
         iterations,
         bestDraft,
+        baselineScores,
         bestScores,
         finalScore:
           iterations.length > 0
@@ -280,6 +459,9 @@ export default function DocumentationImprovementLoop({
           const review = normalizeLoopReview(reviewRes.data ?? {}, {
             iterationNumber: i,
           });
+          if (!baselineScores) {
+            baselineScores = review.scores;
+          }
 
           let patches: TokenSavingLoopIteration["patches"] = [];
           let outputDraft = workingDraft;
@@ -416,6 +598,7 @@ export default function DocumentationImprovementLoop({
             settings,
             iterations: [...iterations],
             bestDraft,
+            baselineScores,
             bestScores,
             finalScore: iteration.scores.overall,
             blockingQuestions: collectBlockingQuestions(iterations),
@@ -475,6 +658,9 @@ export default function DocumentationImprovementLoop({
             iterationNumber: i,
             inputDraft: workingDraft,
           });
+          if (!baselineScores) {
+            baselineScores = legacy.scores;
+          }
 
           const iteration: TokenSavingLoopIteration = {
             iterationNumber: legacy.iterationNumber,
@@ -527,6 +713,7 @@ export default function DocumentationImprovementLoop({
             settings,
             iterations: [...iterations],
             bestDraft,
+            baselineScores,
             bestScores,
             finalScore: iteration.scores.overall,
             blockingQuestions: collectBlockingQuestions(iterations),
@@ -593,6 +780,12 @@ export default function DocumentationImprovementLoop({
   const previewHtml = loop.bestDraft
     ? (marked.parse(loop.bestDraft) as string)
     : "";
+  const baselineScores = loop.baselineScores ?? loop.iterations[0]?.scores;
+  const previousScores =
+    loop.iterations.length > 1
+      ? loop.iterations[loop.iterations.length - 2].scores
+      : baselineScores;
+  const hasScoreChange = !!latestScores && !!baselineScores;
 
   return (
     <div className="space-y-4">
@@ -786,6 +979,47 @@ export default function DocumentationImprovementLoop({
         </SectionCard>
       </div>
 
+      {hasScoreChange && latestScores && baselineScores && (
+        <SectionCard
+          title={t("loop.scoreChangeTitle")}
+          description={t("loop.scoreChangeDesc")}
+          collapsible={false}
+        >
+          <div className="space-y-4">
+            <ScoreChangeHero
+              before={baselineScores.overall}
+              after={latestScores.overall}
+              target={settings.targetScore}
+              labels={{
+                before: t("loop.beforeScore"),
+                after: t("loop.afterScore"),
+                change: t("loop.scoreDelta"),
+                target: t("loop.targetScore"),
+                improved: t("loop.scoreImproved"),
+                unchanged: t("loop.scoreUnchanged"),
+              }}
+            />
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {scoreRows.map(({ key, label }, index) => (
+                <div
+                  key={key}
+                  className="animate-[fadeInUp_0.6s_ease-out_both]"
+                  style={{ animationDelay: `${index * 80}ms` }}
+                >
+                  <AnimatedScoreCard
+                    label={label}
+                    before={baselineScores[key]}
+                    after={latestScores[key]}
+                    beforeLabel={t("loop.beforeShort")}
+                    afterLabel={t("loop.afterShort")}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        </SectionCard>
+      )}
+
       {latestScores && (
         <SectionCard title={t("loop.qualityScore")} collapsible={false}>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -799,7 +1033,15 @@ export default function DocumentationImprovementLoop({
       {loop.iterations.length > 0 && (
         <SectionCard title={t("loop.iterationTimeline")} collapsible={false}>
           <ol className="relative space-y-4 border-l-2 border-brand-200 pl-4">
-            {loop.iterations.map((it) => (
+            {loop.iterations.map((it, index) => {
+              const compareScores =
+                index === 0
+                  ? loop.baselineScores ?? it.scores
+                  : loop.iterations[index - 1].scores;
+              const iterationDelta = it.scores.overall - compareScores.overall;
+              const tone = deltaTone(iterationDelta);
+
+              return (
               <li key={it.iterationNumber} className="relative">
                 <span className="absolute -left-[1.35rem] top-1 flex h-5 w-5 items-center justify-center rounded-full bg-brand-600 text-[10px] font-bold text-white">
                   {it.iterationNumber}
@@ -812,7 +1054,37 @@ export default function DocumentationImprovementLoop({
                     <span className="rounded-full bg-brand-50 px-2.5 py-0.5 text-xs font-semibold text-brand-700 ring-1 ring-inset ring-brand-200">
                       {t("loop.scoreShort")}: {it.scores.overall}
                     </span>
+                    <span
+                      className={`animate-bounce rounded-full px-2.5 py-0.5 text-xs font-bold tabular-nums ring-1 ${tone.bg} ${tone.text} ${tone.ring}`}
+                    >
+                      {formatDelta(iterationDelta)}
+                    </span>
                   </div>
+                  {previousScores && (
+                    <div className="mt-2 grid gap-2 sm:grid-cols-3">
+                      <AnimatedScoreCard
+                        label={t("loop.scoreOverall")}
+                        before={compareScores.overall}
+                        after={it.scores.overall}
+                        beforeLabel={t("loop.previousShort")}
+                        afterLabel={t("loop.currentShort")}
+                      />
+                      <AnimatedScoreCard
+                        label={t("loop.scoreClarity")}
+                        before={compareScores.clarity}
+                        after={it.scores.clarity}
+                        beforeLabel={t("loop.previousShort")}
+                        afterLabel={t("loop.currentShort")}
+                      />
+                      <AnimatedScoreCard
+                        label={t("loop.scoreStructure")}
+                        before={compareScores.structure}
+                        after={it.scores.structure}
+                        beforeLabel={t("loop.previousShort")}
+                        afterLabel={t("loop.currentShort")}
+                      />
+                    </div>
+                  )}
                   {it.patchPlan?.summary && (
                     <p className="mt-1 text-xs text-slate-500">
                       {it.patchPlan.summary}
@@ -857,7 +1129,8 @@ export default function DocumentationImprovementLoop({
                   )}
                 </div>
               </li>
-            ))}
+              );
+            })}
           </ol>
         </SectionCard>
       )}

@@ -77,6 +77,17 @@ body {
   border-radius: 9999px;
 }
 
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 .premium-content .markdown-preview h1 {
   @apply mb-3 mt-2 text-2xl font-bold text-foreground;
 }
