@@ -111,6 +111,22 @@ export const messages: Record<Locale, MessageTree> = {
       exportMd: ".md 내보내기",
       previewError: "미리보기를 렌더링할 수 없습니다.",
     },
+    featureNav: {
+      inputEyebrow: "대표 기능 1",
+      inputTitle: "API 메모를 구조화",
+      inputDesc:
+        "엔지니어가 준 원본 메모를 붙여넣고, API 분석으로 문서에 필요한 핵심 정보를 크게 정리합니다.",
+      reviewEyebrow: "대표 기능 2",
+      reviewTitle: "누락 정보와 질문 찾기",
+      reviewDesc:
+        "게시 전에 확인해야 할 사실, 엔지니어에게 물어볼 질문, 리뷰 이슈를 한 화면에서 점검합니다.",
+      docsEyebrow: "대표 기능 3",
+      docsTitle: "문서 초안 완성",
+      docsDesc:
+        "Markdown 문서를 미리보고, 수정하고, 개선 루프를 돌려 면접에서 보여줄 결과물로 다듬습니다.",
+      previous: "이전",
+      next: "다음 기능",
+    },
     styleGuide: {
       label: "문서 스타일 가이드",
       placeholder:
@@ -590,6 +606,22 @@ Use backticks for field names.`,
       copied: "Copied!",
       exportMd: "Export .md",
       previewError: "Unable to render preview.",
+    },
+    featureNav: {
+      inputEyebrow: "Feature 1",
+      inputTitle: "Structure API Notes",
+      inputDesc:
+        "Paste raw engineering notes and use Analyze API to turn them into clear documentation-ready structure.",
+      reviewEyebrow: "Feature 2",
+      reviewTitle: "Find Gaps and Questions",
+      reviewDesc:
+        "Review missing facts, engineer questions, and documentation issues before publishing.",
+      docsEyebrow: "Feature 3",
+      docsTitle: "Finish the Draft",
+      docsDesc:
+        "Preview, edit, export, and improve the Markdown draft into an interview-ready artifact.",
+      previous: "Previous",
+      next: "Next Feature",
     },
     styleGuide: {
       label: "Documentation style guide",
