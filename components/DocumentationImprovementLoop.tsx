@@ -14,7 +14,7 @@ import type {
 } from "@/lib/types";
 import { callAi } from "@/lib/client";
 import { compactApiProjectSummary } from "@/lib/compactProject";
-import { applyMarkdownPatches } from "@/lib/markdownPatches";
+import { applyImprovementLoopPatches, finalizeImprovementLoopDraft } from "@/lib/markdownPatches";
 import {
   DEFAULT_LOOP_SETTINGS,
   createIdleLoopResult,
@@ -461,6 +461,7 @@ export default function DocumentationImprovementLoop({
     let status: ImprovementLoopResult["status"] = "completed";
 
     const finishRunning = () => {
+      const finalizedBest = finalizeImprovementLoopDraft(draft, bestDraft);
       setPhase("idle");
       setCurrentIteration(0);
       setLoop((prev) => ({
@@ -468,7 +469,7 @@ export default function DocumentationImprovementLoop({
         status,
         settings,
         iterations,
-        bestDraft,
+        bestDraft: finalizedBest,
         baselineScores,
         bestScores,
         finalScore:
@@ -540,7 +541,7 @@ export default function DocumentationImprovementLoop({
             setPhase("checking_style");
             patches = normalizeLoopPatch(patchRes.data ?? {});
             if (patches.length > 0) {
-              outputDraft = applyMarkdownPatches(workingDraft, patches);
+              outputDraft = applyImprovementLoopPatches(workingDraft, patches);
             }
           }
 
@@ -571,7 +572,10 @@ export default function DocumentationImprovementLoop({
             });
 
             if (fallback.outputDraft.trim() !== workingDraft.trim()) {
-              outputDraft = fallback.outputDraft;
+              outputDraft = finalizeImprovementLoopDraft(
+                workingDraft,
+                fallback.outputDraft
+              );
               patchChangedDraft = true;
               finalReview = {
                 iterationNumber: fallback.iterationNumber,
@@ -640,7 +644,7 @@ export default function DocumentationImprovementLoop({
 
           if (iteration.scores.overall > bestScore) {
             bestScore = iteration.scores.overall;
-            bestDraft = workingDraft;
+            bestDraft = finalizeImprovementLoopDraft(draft, workingDraft);
             bestScores = iteration.scores;
           }
 
@@ -648,7 +652,7 @@ export default function DocumentationImprovementLoop({
             status: "running",
             settings,
             iterations: [...iterations],
-            bestDraft,
+            bestDraft: finalizeImprovementLoopDraft(draft, bestDraft),
             baselineScores,
             bestScores,
             finalScore: iteration.scores.overall,
@@ -759,7 +763,7 @@ export default function DocumentationImprovementLoop({
 
           if (iteration.scores.overall > bestScore) {
             bestScore = iteration.scores.overall;
-            bestDraft = workingDraft;
+            bestDraft = finalizeImprovementLoopDraft(draft, workingDraft);
             bestScores = iteration.scores;
           }
 
@@ -767,7 +771,7 @@ export default function DocumentationImprovementLoop({
             status: "running",
             settings,
             iterations: [...iterations],
-            bestDraft,
+            bestDraft: finalizeImprovementLoopDraft(draft, bestDraft),
             baselineScores,
             bestScores,
             finalScore: iteration.scores.overall,

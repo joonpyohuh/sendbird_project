@@ -1,10 +1,11 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Eye, Code, RefreshCw, Copy, Download } from "lucide-react";
+import { Eye, Code, RefreshCw, Copy, Download, ClipboardCheck } from "lucide-react";
 import { marked } from "marked";
 import type { ApiDocProject, TargetReader } from "@/lib/types";
 import DocumentationImprovementLoop from "@/components/DocumentationImprovementLoop";
+import DocumentationQAPipeline from "@/components/DocumentationQAPipeline";
 import { useAppPreferences } from "@/components/shell/AppPreferencesProvider";
 import { Tabs, ActionButton, EmptyState } from "./primitives";
 
@@ -39,6 +40,11 @@ export function DocumentationPanel({
         id: "loop",
         label: t("workspace.tabLoop"),
         icon: <RefreshCw className="h-3.5 w-3.5" />,
+      },
+      {
+        id: "qa",
+        label: t("workspace.tabQa"),
+        icon: <ClipboardCheck className="h-3.5 w-3.5" />,
       },
     ],
     [t]
@@ -143,6 +149,14 @@ export function DocumentationPanel({
             project={project}
             currentDraft={markdown}
             targetReader={targetReader}
+            onApplyToMainDraft={onApplyToMainDraft}
+          />
+        )}
+
+        {tab === "qa" && (
+          <DocumentationQAPipeline
+            project={project}
+            currentDraft={markdown}
             onApplyToMainDraft={onApplyToMainDraft}
           />
         )}

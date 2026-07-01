@@ -188,3 +188,125 @@ export function applyMarkdownPatches(
 
   return rebuildDraft(sections);
 }
+
+/** Count duplicate section keys (level + normalized title). */
+export function getDuplicateSectionTitles(draft: string): string[] {
+  const sections = parseMarkdownSections(draft);
+  const counts = new Map<string, number>();
+  for (const s of sections) {
+    if (!s.title.trim()) continue;
+    const key = `${s.level}:${normTitle(s.title)}`;
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+  return [...counts.entries()]
+    .filter(([, count]) => count > 1)
+    .map(([key]) => key);
+}
+
+/** Keep the first occurrence of each heading (same level + title). */
+export function deduplicateMarkdownSections(draft: string): string {
+  const sections = parseMarkdownSections(draft);
+  const seen = new Set<string>();
+  const kept: MarkdownSection[] = [];
+
+  for (const s of sections) {
+    if (!s.title.trim()) {
+      kept.push(s);
+      continue;
+    }
+    const key = `${s.level}:${normTitle(s.title)}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    kept.push(s);
+  }
+
+  return rebuildDraft(kept);
+}
+
+export function validateImprovementLoopDraft(draft: string): boolean {
+  return getDuplicateSectionTitles(draft).length === 0;
+}
+
+/**
+ * Detect when the model concatenated the input draft with an improved copy
+ * and return the replacement document instead of the concatenation.
+ */
+export function resolveLoopOutputDraft(
+  inputDraft: string,
+  outputDraft: string
+): string {
+  let result = outputDraft.trim();
+  const input = inputDraft.trim();
+  if (!result) return input;
+  if (!input || result === input) return result;
+
+  if (input.length > 80 && result.startsWith(input)) {
+    const tail = result.slice(input.length).replace(/^\s*\n+/, "").trim();
+    if (tail.length >= 40 && /^#{1,6}\s/m.test(tail)) {
+      result = tail;
+    }
+  }
+
+  return result;
+}
+
+const MAX_DEDUPE_PASSES = 3;
+
+/** Finalize a loop iteration draft: strip concatenation, dedupe, validate. */
+export function finalizeImprovementLoopDraft(
+  inputDraft: string,
+  candidateDraft: string
+): string {
+  let draft = resolveLoopOutputDraft(inputDraft, candidateDraft);
+  for (let i = 0; i < MAX_DEDUPE_PASSES; i++) {
+    draft = deduplicateMarkdownSections(draft);
+    if (validateImprovementLoopDraft(draft)) break;
+  }
+  return draft;
+}
+
+function patchLooksLikeFullDocument(markdown: string): boolean {
+  const topSections = parseMarkdownSections(markdown).filter(
+    (s) => s.title.trim() && s.level <= 2
+  );
+  return topSections.length >= 3;
+}
+
+function coerceLoopPatches(
+  draft: string,
+  patches: SectionPatch[]
+): SectionPatch[] {
+  const sections = parseMarkdownSections(draft);
+  return patches.map((patch) => {
+    if (patch.action === "delete") return patch;
+    const exists =
+      patch.sectionTitle.trim().length > 0 &&
+      findSectionIndex(sections, patch.sectionTitle) !== -1;
+    if (exists && (patch.action === "append" || patch.action === "insert_after")) {
+      return { ...patch, action: "replace" };
+    }
+    return patch;
+  });
+}
+
+/**
+ * Apply patches for the improvement loop — always replaces, never stacks
+ * a second full document beneath the original.
+ */
+export function applyImprovementLoopPatches(
+  draft: string,
+  patches: SectionPatch[]
+): string {
+  if (!patches.length) return draft;
+
+  const fullDocPatch = patches.find(
+    (p) => p.markdown.trim() && patchLooksLikeFullDocument(p.markdown)
+  );
+  if (fullDocPatch) {
+    return finalizeImprovementLoopDraft(draft, fullDocPatch.markdown);
+  }
+
+  const coerced = coerceLoopPatches(draft, patches);
+  const patched = applyMarkdownPatches(draft, coerced);
+  return finalizeImprovementLoopDraft(draft, patched);
+}

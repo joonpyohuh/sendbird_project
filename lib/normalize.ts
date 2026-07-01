@@ -34,8 +34,15 @@ import type {
   QualityScores,
   SectionPatch,
   TokenSavingLoopIteration,
+  DocQAStructureIssue,
+  DocQAConsistencyIssue,
+  DocQATwSuggestion,
+  DocQAValidationResult,
+  DocQAValidationChecks,
+  DocQASeverity,
 } from "./types";
 import { EMPTY_FORM } from "./sample";
+import { finalizeImprovementLoopDraft } from "./markdownPatches";
 
 export function uid(prefix = "id"): string {
   return `${prefix}_${Math.random().toString(36).slice(2, 10)}`;
@@ -662,7 +669,10 @@ export function normalizeLoopIteration(
   }
 ): LoopIteration {
   const o = rec(v);
-  const outputDraft = str(o.outputDraft) || fallback.inputDraft;
+  const rawOutput = str(o.outputDraft);
+  const outputDraft = rawOutput
+    ? finalizeImprovementLoopDraft(fallback.inputDraft, rawOutput)
+    : fallback.inputDraft;
   return {
     iterationNumber: num(o.iterationNumber) ?? fallback.iterationNumber,
     inputDraft: str(o.inputDraft) || fallback.inputDraft,
@@ -756,4 +766,69 @@ export function registerIssueKeys(
     const key = loopIssueKey(iss);
     if (key) seenKeys.add(key);
   }
+}
+
+const QA_SEVERITIES: DocQASeverity[] = ["high", "medium", "low"];
+
+function qaSeverity(v: unknown): DocQASeverity {
+  return oneOf<DocQASeverity>(v, QA_SEVERITIES, "medium");
+}
+
+export function normalizeStructureIssues(v: unknown): DocQAStructureIssue[] {
+  const list = Array.isArray(v) ? v : arr(rec(v).issues);
+  return list.map((item) => {
+    const o = rec(item);
+    return {
+      issue: str(o.issue) || str(o.description) || "Unspecified structure issue",
+      location: str(o.location) || undefined,
+      severity: qaSeverity(o.severity),
+    };
+  });
+}
+
+export function normalizeConsistencyIssues(v: unknown): DocQAConsistencyIssue[] {
+  const list = Array.isArray(v) ? v : arr(rec(v).inconsistencies);
+  return list.map((item) => {
+    const o = rec(item);
+    return {
+      inconsistency:
+        str(o.inconsistency) || str(o.issue) || "Unspecified inconsistency",
+      details: str(o.details) || undefined,
+      severity: qaSeverity(o.severity),
+    };
+  });
+}
+
+export function normalizeTwSuggestions(v: unknown): DocQATwSuggestion[] {
+  const list = Array.isArray(v) ? v : arr(rec(v).suggestions);
+  return list.map((item) => {
+    const o = rec(item);
+    return {
+      area: str(o.area) || "general",
+      suggestion: str(o.suggestion) || str(o.issue) || "Unspecified suggestion",
+      severity: qaSeverity(o.severity),
+    };
+  });
+}
+
+export function normalizeDocQAValidation(v: unknown): DocQAValidationResult {
+  const o = rec(v);
+  const checksRaw = rec(o.checks);
+  const checks: DocQAValidationChecks = {
+    noDuplicateHeadings: bool(checksRaw.noDuplicateHeadings) ?? false,
+    noDuplicatedTables: bool(checksRaw.noDuplicatedTables) ?? false,
+    noDuplicatedRequestBody: bool(checksRaw.noDuplicatedRequestBody) ?? false,
+    noDuplicatedResponseBody: bool(checksRaw.noDuplicatedResponseBody) ?? false,
+    markdownRendersCorrectly: bool(checksRaw.markdownRendersCorrectly) ?? false,
+    validHeadingHierarchy: bool(checksRaw.validHeadingHierarchy) ?? false,
+    examplesMatchSchema: bool(checksRaw.examplesMatchSchema) ?? false,
+    unknownFormattingConsistent:
+      bool(checksRaw.unknownFormattingConsistent) ?? false,
+    requestResponseSectionsOnce:
+      bool(checksRaw.requestResponseSectionsOnce) ?? false,
+  };
+  const failedChecks = arr(o.failedChecks).map((s) => str(s)).filter(Boolean);
+  const allPass = Object.values(checks).every(Boolean);
+  const passesAll = bool(o.passesAll) ?? (allPass && failedChecks.length === 0);
+  return { passesAll, checks, failedChecks };
 }

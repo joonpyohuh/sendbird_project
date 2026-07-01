@@ -690,20 +690,22 @@ INPUT: currentDraft, patchPlan, issues (from review), apiProjectSummary, styleGu
 
 Rules:
 - Return patches for at most 3 sections listed in sectionsToPatch.
-- Each patch: sectionTitle, action (replace|insert_after|append|delete), targetSection (if needed),
+- Each patch: sectionTitle, action (replace|insert_after|delete), targetSection (if needed),
   markdown (FULL content for THAT section only, including ## heading), reason (brief, max 15 words).
 - Do NOT return unchanged sections or the full document.
+- NEVER use action="append". NEVER concatenate the full currentDraft below patches.
 - Do NOT invent technical facts. Mark unknowns as "Unknown" or ask via engineer question (not in this pass).
 - Follow settings.mode and styleGuide when provided.
-- Prefer action="replace" for existing headings. Use the exact currentDraft heading text as sectionTitle
-  so the patch can be applied deterministically.
-- If a needed section is missing, use action="insert_after" with targetSection set to an existing heading.
+- ALWAYS use action="replace" when the section heading already exists in currentDraft.
+- Use the exact currentDraft heading text as sectionTitle so the patch can be applied deterministically.
+- Use action="insert_after" ONLY when the section is genuinely missing from currentDraft.
 - The patch must materially improve the section. Do not return empty markdown or unchanged text.
+- Each patch markdown must contain ONLY one section — never paste the entire document into one patch.
 
 Return ONLY compact JSON:
 {
   "patches": [
-    { "sectionTitle": string, "action": "replace"|"insert_after"|"append"|"delete",
+    { "sectionTitle": string, "action": "replace"|"insert_after"|"delete",
       "targetSection": string, "markdown": string, "reason": string }
   ]
 }
@@ -769,8 +771,9 @@ Steps:
 3. List issues with dimension, impact (high/medium/low), suggestion, requiresEngineerInput.
 4. If settings.includeTechnicalEnglishReview, penalize unnatural/literal English in technicalEnglish score.
 5. If settings.includeSecurityReview, penalize missing security warnings in security score.
-6. Produce outputDraft: a COMPLETE improved Markdown document (not patches). Keep useful content.
-   Mark unknown facts clearly. Follow settings.mode behavior.
+6. Produce outputDraft: a COMPLETE improved Markdown document that REPLACES currentDraft entirely.
+   It must NOT concatenate currentDraft + improved copy. Never append a second document below the original.
+   Keep useful content. Mark unknown facts clearly. Follow settings.mode behavior.
 7. List improvements made (description, dimension, optional before/after snippets).
 8. Generate engineerQuestions only for missing facts that matter for documentation quality.
 9. Set stopRecommended true when: score is high enough for target, remaining issues need engineer input,
@@ -804,6 +807,7 @@ Return ONLY JSON matching this LoopIteration shape:
 
 Do NOT include "id" fields in issues/improvements/questions — the server will assign them.
 Echo inputDraft from the provided currentDraft. Set iterationNumber from the input.
+outputDraft must completely replace currentDraft — one document only, no duplicated sections.
 outputDraft must be materially improved from currentDraft. Do not echo currentDraft unchanged unless
 stopRecommended is true because no safe improvement is possible; in that case explain why in stopReason.
 If outputDraft improves writer-controlled quality, the scores for clarity, structure, developerReadability,
